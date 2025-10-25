@@ -17,8 +17,8 @@ model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique
   username  String   @unique
-  authId        String            @unique
-
+  password  String   // Hashed password
+  authId    String   @unique
   
   // Relations
   logs      Log[]
@@ -85,7 +85,6 @@ model Log {
   userId               Int
   tagId                Int
   questionId           Int
-
   // Relations
   user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   tag                  Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
