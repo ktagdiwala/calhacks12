@@ -1,0 +1,109 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  username  String   @unique
+  authId        String            @unique
+
+  
+  // Relations
+  logs      Log[]
+  userInputs UserInput[]
+  
+  @@map("users")
+}
+
+model Tag {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  
+  // Relations
+  quizQuestions QuizQuestion[]
+  flashcards    Flashcard[]
+  logs          Log[]
+  
+  @@map("tags")
+}
+
+model QuizQuestion {
+  id            Int      @id @default(autoincrement())
+  question      String
+  correctAnswer String
+  type          QuestionType
+  sourceFile    String?
+  
+  // Foreign keys
+  tagId         Int
+  
+  // Relations
+  tag           Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  logs          Log[]
+  
+  @@map("quiz_questions")
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  FILL_IN_BLANK
+  EXPLAIN_PROMPT
+}
+
+model Flashcard {
+  id          Int      @id @default(autoincrement())
+  information String
+  
+  // Foreign keys
+  tagId       Int
+  
+  // Relations
+  tag         Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  
+  @@map("flashcards")
+}
+
+model Log {
+  id                   Int      @id @default(autoincrement())
+  timestamp            DateTime @default(now())
+  distanceUntilNextDate Int     // Number of days until next review
+  
+  // Foreign keys
+  userId               Int
+  tagId                Int
+  questionId           Int
+
+  // Relations
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tag                  Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  question             QuizQuestion      @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  
+  @@map("logs")
+}
+
+model UserInput {
+  id          Int      @id @default(autoincrement())
+  description String   // String to describe source
+  content     String?  // Additional content if needed
+  
+  // Foreign keys
+  userId      Int
+  
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("user_inputs")
+}
