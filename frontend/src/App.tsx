@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { TopicsPage } from '../components/TopicsPage';
 import { UploadContent } from '../components/UploadContent';
-// import { FlashcardsPage } from './components/FlashcardsPage';
-// import { QuizPage } from './components/QuizPage';
-// import { TutorStudentPage } from './components/TutorStudentPage';
+import { FlashcardsPage } from '../components/FlashcardsPage'
+import { QuizPage } from '../components/QuizPage';
+import { TutorStudentPage } from '../components/TutorStudentPage';
 import { DashboardPage } from '../components/DashboardPage';
-import { LoginPage } from '../components/LoginPage';
+// import { LoginPage } from '../components/LoginPage';
 // import { ProfilePage } from './components/ProfilePage';
 
 export type PageType = 'dashboard' | 'topics' | 'upload' | 'flashcards' | 'quiz' | 'tutor' | 'profile';
@@ -29,9 +29,9 @@ export default function App() {
     setCurrentPage('dashboard');
   };
 
-  if (!user) {
-    return <LoginPage onLogin={handleLogin} />;
-  }
+  // if (!user) {
+  //   return <LoginPage onLogin={handleLogin} />;
+  // }
 
   const renderPage = () => {
     switch (currentPage) {
@@ -41,12 +41,12 @@ export default function App() {
         return <TopicsPage />;
       case 'upload':
         return <UploadContent />;
-      // case 'flashcards':
-      //   return <FlashcardsPage />;
-      // case 'quiz':
-      //   return <QuizPage />;
-      // case 'tutor':
-      //   return <TutorStudentPage />;
+      case 'flashcards':
+        return <FlashcardsPage />;
+      case 'quiz':
+        return <QuizPage />;
+      case 'tutor':
+        return <TutorStudentPage />;
       // case 'profile':
       //   return <ProfilePage user={user} onLogout={handleLogout} />;
       default:
