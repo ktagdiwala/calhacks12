@@ -115,7 +115,7 @@ async function getQuestionsToShow(userId) {
       // Only include flashcards that would be shown as flashcards
       if (questionType === "FLASHCARD") {
         questionsToShow.push({
-          id: flashcard.id,
+          questionId: flashcard.id,
           question: flashcard.information,
           typeOfQuestion: "FLASHCARD",
           confidence,
@@ -140,7 +140,7 @@ async function getQuestionsToShow(userId) {
       const questionType = getQuestionFormat(confidence);
 
       questionsToShow.push({
-        id: question.id,
+        questionId: question.id,
         question: question.question,
         typeOfQuestion: questionType,
         confidence,
@@ -276,20 +276,10 @@ router.post("/:flashcardId/rating", async (req, res, next) => {
     // Create log entry for spaced repetition
     const daysUntilNext = calculateNextReviewDays(confidence);
 
-    const log = await prisma.log.create({
-      data: {
-        userId,
-        tagId: flashcard.tagId,
-        questionId: flashcardId,
-        distanceUntilNextDate: daysUntilNext,
-      },
-    });
-
     res.json({
       message: "Rating updated successfully",
       flashcard: updated,
       nextReviewInDays: daysUntilNext,
-      log,
     });
   } catch (error) {
     next(error);
@@ -663,9 +653,8 @@ router.post("/tags", async (req, res, next) => {
 /* GET questions to show for user - PUBLIC */
 router.get("/show/user/:userId", async (req, res, next) => {
   try {
-    console.log("here2");
     const userId = parseInt(req.params.userId);
-    console.log("Getting questions to show for user:", userId);
+
     const questionsToShow = await getQuestionsToShow(userId);
 
     res.json({

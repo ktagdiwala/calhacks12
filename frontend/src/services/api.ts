@@ -93,20 +93,6 @@ export const tagsAPI = {
     const response = await api.post(`/tags/${userId}`, tagData);
     return response.data;
   },
-
-  getQuestionsToShow: async (userId: number) => {
-    console.log("here 1:", userId);
-    const response = await api.get(`/flashcards/show/user/${userId}`);
-    return response.data;
-  },
-
-  submitFlashcardRating: async (flashcardId: string, confidence: number, userId: number) => {
-    const response = await api.post(`/flashcards/${flashcardId}/rating`, {
-      confidence,
-      userId,
-    });
-    return response.data;
-  },
 };
 
 export default api;
