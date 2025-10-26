@@ -41,7 +41,10 @@ export function FlashcardsPage() {
         setError(null);
         const data = await tagsAPI.getQuestionsToShow(userId);
         console.log(data)
-        setFlashcards(data.questions || []);
+        const flashcardItems = (data.questions || []).filter(
+          (question: FlashcardData) => question.typeOfQuestion === 'FLASHCARD'
+        );
+        setFlashcards(flashcardItems);
       } catch (err) {
         console.error('Error fetching flashcards:', err);
         setError('Failed to load flashcards. Please try again.');
