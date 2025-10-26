@@ -1,0 +1,22 @@
+Flashcards route
+- GET flashcards with tagId and userId
+   - edit prisma database to include rating for flashcards
+   - edit db to explanation for correct answer
+- POST rating for flashcards
+- State (spaced repetition system algorithm): 
+    - Once a tag reaches a level of confidence, it will be asked in a more difficult format
+        - easy to hard: flashcard, multiple choice, fill in the blank, tutor student
+    - If they display a lower level of confidence, they are asked in an easier format
+        - lower level confidence also decreases the time before they will be asked the same question again (they will be asked the same question sooner)
+- GET quiz question with question type enum, questionId, userId
+- POST answer, check if answer is correct, and run the algorithm descibed above to ask questions periodically based on the student's proficiency for each topic/question
+- POST question, correct answer, question type enum, tagId to add new questions to the database
+- POST flashcard, answer, tagId to add new flashcards to the database
+- GET all tags for a userId
+- POST new tag for a userId
+- total items in log for a userID (cards reviewed) 7 days past past today
+- total flashcards/quiz_question or students tutored 7 days past today
+- Average confidence level for flashcards
+- get topicPercentage - percentage of topics masterd for a tag / divided by total topics for that tag
+-  
+

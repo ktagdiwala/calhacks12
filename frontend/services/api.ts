@@ -54,6 +54,19 @@ export const authAPI = {
   },
 };
 
+// Analytics endpoints
+export const analyticsAPI = {
+  getWeeklyStats: async (userId: number) => {
+    const response = await api.get(`/analytics/weekly-stats/${userId}`);
+    return response.data;
+  },
+
+  getTopicProgress: async (userId: number) => {
+    const response = await api.get(`/analytics/topic-progress/${userId}`);
+    return response.data;
+  },
+};
+
 // User endpoints
 export const userAPI = {
   getAllUsers: async () => {
@@ -95,18 +108,7 @@ export const tagsAPI = {
   },
 
   getQuestionsToShow: async (userId: number) => {
-    console.log("here 1:", userId);
     const response = await api.get(`/flashcards/show/user/${userId}`);
     return response.data;
   },
-
-  submitFlashcardRating: async (flashcardId: string, confidence: number, userId: number) => {
-    const response = await api.post(`/flashcards/${flashcardId}/rating`, {
-      confidence,
-      userId,
-    });
-    return response.data;
-  },
 };
-
-export default api;

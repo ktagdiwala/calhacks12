@@ -48,21 +48,22 @@ router.post("/auth/signup", async (req, res, next) => {
 /* SIGN IN - PUBLIC - DEMO MODE: ANY VALID EMAIL */
 router.post("/auth/signin", async (req, res, next) => {
   try {
+    console.log("POST /auth/signin - Request body:", req.body);
     const { email, password } = req.body;
 
     if (!email) {
       return res.status(400).json({ error: "Email is required" });
     }
 
-    // DEMO MODE: Check if user exists in database by email
-    // This allows any user with a valid email in the database to login
-    const user = await prisma.user.findUnique({
-      where: { email },
-      include: {
-        logs: true,
-        userInputs: true,
-      },
-    });
+
+    const user = await prisma.user
+      .findUnique({
+        where: { email: email },
+      })
+      .catch((err) => {
+        console.error("Database query error:", err);
+        throw err;
+      });
 
     if (!user) {
       return res
@@ -72,17 +73,16 @@ router.post("/auth/signin", async (req, res, next) => {
 
     // DEMO MODE: Skip password validation, just return the user
     // In production, validate password against Supabase
-    res.json({
+    return res.json({
       message: "Signed in successfully",
       session: null, // No real session in demo mode
       user,
     });
   } catch (error) {
+    console.error("Full error:", error);
     next(error);
   }
-});
-
-/* SIGN OUT - PROTECTED */
+}); /* SIGN OUT - PROTECTED */
 router.post("/auth/signout", authenticateUser, async (req, res, next) => {
   try {
     res.json({ message: "Signed out successfully" });
