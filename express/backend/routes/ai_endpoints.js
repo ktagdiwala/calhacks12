@@ -185,4 +185,63 @@ router.post("/quiz-questions", async (req, res, next) => {
   }
 });
 
+/**
+ * GET /api/ai/random-question
+ * Query parameters: type (optional), userId (optional), tagId (optional)
+ * Returns a random question of any type, any user
+ */
+router.get("/random-question", async (req, res, next) => {
+  try {
+    const { type, userId, tagId } = req.query;
+
+    // Build the filter
+    const where = {};
+
+    // Add type filter if provided
+    if (type) {
+      where.type = type.toUpperCase();
+    }
+
+    // Add userId filter if provided
+    if (userId) {
+      const userIdInt = parseInt(userId, 10);
+      if (isNaN(userIdInt)) {
+        return res.status(400).json({ error: "Invalid User ID" });
+      }
+      where.userId = userIdInt;
+    }
+
+    // Add tagId filter if provided
+    if (tagId) {
+      const tagIdInt = parseInt(tagId, 10);
+      if (isNaN(tagIdInt)) {
+        return res.status(400).json({ error: "Invalid Tag ID" });
+      }
+      where.tagId = tagIdInt;
+    }
+
+    // Get all matching questions
+    const questions = await prisma.quizQuestion.findMany({
+      where,
+      include: {
+        tag: true,
+      },
+    });
+
+    if (questions.length === 0) {
+      return res.status(404).json({ error: "No questions found matching the criteria" });
+    }
+
+    // Select a random question
+    const randomIndex = Math.floor(Math.random() * questions.length);
+    const randomQuestion = questions[randomIndex];
+
+    res.json(randomQuestion);
+  } catch (error) {
+    console.error("Error fetching random question:", error);
+    next(error);
+  }
+});
+
+
 module.exports = router;

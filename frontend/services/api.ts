@@ -112,3 +112,12 @@ export const tagsAPI = {
     return response.data;
   },
 };
+
+// AI endpoints
+export const aiAPI = {
+  getRandomQuestion: async () => {
+    
+    const response = await api.get(`/ai/random-question}`);
+    return response.data;
+  },
+};

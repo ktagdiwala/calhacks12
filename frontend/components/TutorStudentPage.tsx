@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Send, Bot, User } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
 import { ScrollArea } from './ui/scroll-area';
+import { LettaClient } from "@letta-ai/letta-client";
+import { aiAPI } from '../services/api';
 
 interface Message {
   id: string;
@@ -13,23 +15,97 @@ interface Message {
   timestamp: Date;
 }
 
-const initialMessages: Message[] = [
-  {
-    id: '1',
-    role: 'student',
-    content: "Hi! I'm trying to understand neural networks better. Can you explain to me what an activation function is and why we need it?",
-    timestamp: new Date(),
-  },
-];
-
 export function TutorStudentPage() {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
-  const [currentTopic] = useState('Machine Learning');
+  const [currentTopic, setCurrentTopic] = useState('Machine Learning');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSend = () => {
-    if (!inputValue.trim()) return;
+  // Fetch random question on component mount
+  useEffect(() => {
+    const fetchRandomQuestion = async () => {
+      try {
+        const question = await aiAPI.getRandomQuestion();
+        const initialMessage: Message = {
+          id: '1',
+          role: 'student',
+          content: question.question,
+          timestamp: new Date(),
+        };
+        setMessages([initialMessage]);
+        setCurrentTopic(question.tag?.name || 'Machine Learning');
+      } catch (error) {
+        console.error('Error fetching random question:', error);
+        // Fallback message if API fails
+        const initialMessage: Message = {
+          id: '1',
+          role: 'student',
+          content: 'Explain the concept of machine learning.',
+          timestamp: new Date(),
+        };
+        setMessages([initialMessage]);
+      }
+    };
 
+    fetchRandomQuestion();
+  }, []);
+
+  const getLettaClient = () => {
+    return new LettaClient({
+      token: "sk-let-NDM0MmRiMjYtNmU2Ny00ZGExLTgyYmUtOWUxY2M4YzIxYzMwOmUzOTE2NTI5LTYyZGUtNGU4OC1hMTQ2LTI2YzAzODU3YmY3Nw==",
+    });
+  };
+
+  /** Extract text from Letta's message response */
+  const extractLettaResponse = (messages: any[]): string => {
+    if (!messages || messages.length === 0) return "";
+    
+    // Get the last message (most recent response from agent)
+    const lastMessage = messages[messages.length - 1];
+    
+    if (lastMessage?.message) {
+      return lastMessage.message;
+    }
+    
+    if (typeof lastMessage === 'string') {
+      return lastMessage;
+    }
+    
+    return "I understand. Can you tell me more?";
+  };
+
+  const sendToLetta = async (tutorMessage: string): Promise<string> => {
+    const client = getLettaClient();
+    const agentId = "agent-b4f5ea54-fcb0-49bb-9207-cad7a8965960";
+
+    try {
+      const response = await client.agents.messages.create(agentId, {
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: tutorMessage,
+              },
+            ],
+          },
+        ],
+      });
+
+      // Extract the agent's response text
+      const agentResponse = extractLettaResponse(response?.messages || []);
+      return agentResponse || "Thank you for explaining that!";
+    } catch (err) {
+      console.error("Error communicating with Letta agent:", err);
+      return "I'm having trouble understanding. Could you rephrase that?";
+    }
+  };
+
+  const handleSend = async () => {
+    if (!inputValue.trim() || isLoading) return;
+
+    // Add tutor message
     const newMessage: Message = {
       id: Date.now().toString(),
       role: 'tutor',
@@ -38,28 +114,36 @@ export function TutorStudentPage() {
     };
 
     setMessages([...messages, newMessage]);
+    const userInput = inputValue;
     setInputValue('');
+    setIsLoading(true);
 
-    setTimeout(() => {
+    try {
+      // Get agent response from database
+      const agentResponse = await sendToLetta(userInput);
+
+      // Add agent message
       const studentResponse: Message = {
         id: (Date.now() + 1).toString(),
         role: 'student',
-        content: getStudentResponse(inputValue),
+        content: agentResponse,
         timestamp: new Date(),
       };
-      setMessages(prev => [...prev, studentResponse]);
-    }, 1500);
-  };
-
-  const getStudentResponse = (tutorMessage: string) => {
-    const responses = [
-      "That makes sense! So if I understand correctly, the activation function helps the network learn non-linear patterns?",
-      "I see! Can you give me an example of when we would use that?",
-      "Interesting! What happens if we don't use that approach?",
-      "Thanks for explaining! So in summary, would you say that...",
-      "That's helpful! How does this relate to what we discussed earlier?",
-    ];
-    return responses[Math.floor(Math.random() * responses.length)];
+      setMessages((prev) => [...prev, studentResponse]);
+    } catch (err) {
+      console.error("Failed to get agent response:", err);
+      // Add error message
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'student',
+        content:
+          "Sorry, I encountered an error. Could you try asking again?",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -107,7 +191,7 @@ export function TutorStudentPage() {
                     }`}
                   >
                     <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
                         message.role === 'student'
                           ? 'bg-purple-100'
                           : 'bg-blue-100'
@@ -139,6 +223,23 @@ export function TutorStudentPage() {
                     </div>
                   </div>
                 ))}
+                
+                {isLoading && (
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-purple-100">
+                      <Bot className="w-4 h-4 text-purple-600" />
+                    </div>
+                    <div className="flex-1 max-w-[80%]">
+                      <div className="inline-block p-4 rounded-lg bg-slate-100">
+                        <div className="flex gap-1">
+                          <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" />
+                          <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce delay-100" />
+                          <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce delay-200" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </ScrollArea>
 
@@ -154,9 +255,14 @@ export function TutorStudentPage() {
                       handleSend();
                     }
                   }}
+                  disabled={isLoading}
                   className="min-h-[60px] resize-none"
                 />
-                <Button onClick={handleSend} disabled={!inputValue.trim()} className="px-4">
+                <Button 
+                  onClick={handleSend} 
+                  disabled={!inputValue.trim() || isLoading} 
+                  className="px-4"
+                >
                   <Send className="w-4 h-4" />
                 </Button>
               </div>
