@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { LogIn, Mail, Lock, User } from 'lucide-react';
+import { LogIn, Mail, Lock, User, AlertCircle, Loader } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { supabase } from '../src/lib/supabase';
+import { authAPI } from '../src/services/api';
 
 interface LoginPageProps {
   onLogin: (user: { name: string; email: string }) => void;
@@ -16,24 +18,73 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   const [signupName, setSignupName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
+  const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loginEmail && loginPassword) {
-      onLogin({ 
-        name: loginEmail.split('@')[0],
-        email: loginEmail 
+    setError('');
+    setSuccess('');
+    setLoading(true);
+
+    try {
+      if (!loginEmail || !loginPassword) {
+        throw new Error('Please fill in all fields');
+      }
+
+      const response = await authAPI.signin(loginEmail, loginPassword);
+      onLogin({
+        name: response.user?.username || loginEmail.split('@')[0],
+        email: response.user?.email || loginEmail,
       });
+
+      setSuccess('Login successful!');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (signupName && signupEmail && signupPassword) {
-      onLogin({ 
-        name: signupName,
-        email: signupEmail 
-      });
+    setError('');
+    setSuccess('');
+    setLoading(true);
+
+    try {
+      if (!signupName || !signupEmail || !signupPassword) {
+        throw new Error('Please fill in all fields');
+      }
+
+      if (signupPassword !== signupConfirmPassword) {
+        throw new Error('Passwords do not match');
+      }
+
+      if (signupPassword.length < 6) {
+        throw new Error('Password must be at least 6 characters');
+      }
+
+      await authAPI.signup(signupEmail, signupPassword, signupName);
+      setSuccess('Account created successfully! Please check your email to verify.');
+      
+      setSignupName('');
+      setSignupEmail('');
+      setSignupPassword('');
+      setSignupConfirmPassword('');
+
+      setTimeout(() => {
+        onLogin({
+          name: signupName,
+          email: signupEmail,
+        });
+      }, 2000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Signup failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -54,6 +105,19 @@ export function LoginPage({ onLogin }: LoginPageProps) {
             <CardDescription>Sign in to your account or create a new one</CardDescription>
           </CardHeader>
           <CardContent>
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex gap-2">
+                <AlertCircle className="w-4 h-4 text-red-600 mt-0.5" />
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            )}
+
+            {success && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-700">{success}</p>
+              </div>
+            )}
+
             <Tabs defaultValue="login" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Login</TabsTrigger>
@@ -73,6 +137,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
                         className="pl-10"
+                        disabled={loading}
                         required
                       />
                     </div>
@@ -89,18 +154,23 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                         value={loginPassword}
                         onChange={(e) => setLoginPassword(e.target.value)}
                         className="pl-10"
+                        disabled={loading}
                         required
                       />
                     </div>
                   </div>
 
-                  <Button type="submit" className="w-full gap-2">
-                    <LogIn className="w-4 h-4" />
-                    Sign In
+                  <Button type="submit" className="w-full gap-2" disabled={loading}>
+                    {loading ? (
+                      <Loader className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <LogIn className="w-4 h-4" />
+                    )}
+                    {loading ? 'Signing in...' : 'Sign In'}
                   </Button>
 
                   <p className="text-center text-slate-500 text-sm">
-                    Forgot password? <button type="button" className="text-blue-600 hover:underline">Reset it</button>
+                    Forgot password? <button type="button" className="text-blue-600 hover:underline" disabled={loading}>Reset it</button>
                   </p>
                 </form>
               </TabsContent>
@@ -118,6 +188,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                         value={signupName}
                         onChange={(e) => setSignupName(e.target.value)}
                         className="pl-10"
+                        disabled={loading}
                         required
                       />
                     </div>
@@ -134,6 +205,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                         value={signupEmail}
                         onChange={(e) => setSignupEmail(e.target.value)}
                         className="pl-10"
+                        disabled={loading}
                         required
                       />
                     </div>
@@ -150,14 +222,36 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                         value={signupPassword}
                         onChange={(e) => setSignupPassword(e.target.value)}
                         className="pl-10"
+                        disabled={loading}
                         required
                       />
                     </div>
                   </div>
 
-                  <Button type="submit" className="w-full gap-2">
-                    <User className="w-4 h-4" />
-                    Create Account
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-confirm-password">Confirm Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        id="signup-confirm-password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={signupConfirmPassword}
+                        onChange={(e) => setSignupConfirmPassword(e.target.value)}
+                        className="pl-10"
+                        disabled={loading}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <Button type="submit" className="w-full gap-2" disabled={loading}>
+                    {loading ? (
+                      <Loader className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <User className="w-4 h-4" />
+                    )}
+                    {loading ? 'Creating Account...' : 'Create Account'}
                   </Button>
 
                   <p className="text-center text-slate-500 text-sm">
@@ -171,7 +265,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
         <div className="mt-6 text-center">
           <p className="text-slate-500 text-sm">
-            Demo mode: Use any email and password to continue
+            Using Supabase Auth for secure authentication
           </p>
         </div>
       </div>
