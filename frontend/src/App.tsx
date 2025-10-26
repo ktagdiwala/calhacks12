@@ -6,8 +6,8 @@ import { FlashcardsPage } from '../components/FlashcardsPage'
 import { QuizPage } from '../components/QuizPage';
 import { TutorStudentPage } from '../components/TutorStudentPage';
 import { DashboardPage } from '../components/DashboardPage';
-// import { LoginPage } from '../components/LoginPage';
-// import { ProfilePage } from './components/ProfilePage';
+import { LoginPage } from '../components/LoginPage';
+import { ProfilePage } from './components/ProfilePage';
 
 export type PageType = 'dashboard' | 'topics' | 'upload' | 'flashcards' | 'quiz' | 'tutor' | 'profile';
 
@@ -29,9 +29,9 @@ export default function App() {
     setCurrentPage('dashboard');
   };
 
-  // if (!user) {
-  //   return <LoginPage onLogin={handleLogin} />;
-  // }
+  if (!user) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
 
   const renderPage = () => {
     switch (currentPage) {
