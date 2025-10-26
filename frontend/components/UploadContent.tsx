@@ -1,329 +1,3 @@
-// import { useState } from "react";
-// import {
-//   Upload,
-//   FileText,
-//   Image,
-//   Video,
-//   Link as LinkIcon,
-//   Check,
-// } from "lucide-react";
-// import {
-//   Card,
-//   CardContent,
-//   CardDescription,
-//   CardHeader,
-//   CardTitle,
-// } from "./ui/card";
-// import { Button } from "./ui/button";
-// import { Input } from "./ui/input";
-// import { Label } from "./ui/label";
-// import { Textarea } from "./ui/textarea";
-// import {
-//   Select,
-//   SelectContent,
-//   SelectItem,
-//   SelectTrigger,
-//   SelectValue,
-// } from "./ui/select";
-// import { Alert, AlertDescription } from "./ui/alert";
-// import { LettaClient } from "@letta-ai/letta-client";
-
-// export function UploadContent() {
-//   const [selectedTopic, setSelectedTopic] = useState("");
-//   const [uploadType, setUploadType] = useState<"file" | "text" | "link" | null>(
-//     null
-//   );
-//   const [textContent, setTextContent] = useState("");
-//   const [linkUrl, setLinkUrl] = useState("");
-//   const [showSuccess, setShowSuccess] = useState(false);
-//   const [isProcessing, setIsProcessing] = useState(false);
-//   const [error, setError] = useState("");
-
-//   // Initialize Letta client
-//   const getLettaClient = () => {
-//     return new LettaClient({
-//       token:
-//         "sk-let-NDM0MmRiMjYtNmU2Ny00ZGExLTgyYmUtOWUxY2M4YzIxYzMwOmUzOTE2NTI5LTYyZGUtNGU4OC1hMTQ2LTI2YzAzODU3YmY3Nw==",
-//     });
-//   };
-
-//   const sendToLetta = async (content: string, contentType: string) => {
-//     try {
-//       setIsProcessing(true);
-//       setError("");
-
-//       const client = getLettaClient();
-//       // const agentId = process.env.REACT_APP_LETTA_AGENT_ID || 'YOUR_AGENT_ID';
-//       const agentId = "agent-f44ff4d7-31a3-4692-a752-17ba77533052";
-
-//       // Construct message based on upload type
-//       const messageContent = `Topic: ${selectedTopic}\nContent Type: ${contentType}\n\n${content}`;
-
-//       const response = await client.agents.messages.create(agentId, {
-//         messages: [
-//           {
-//             role: "user",
-//             content: [
-//               {
-//                 type: "text",
-//                 text: messageContent,
-//               },
-//             ],
-//           },
-//         ],
-//       });
-
-//       console.log("Letta response:", response.messages);
-
-//       // Process the response and return it
-//       return response;
-//     } catch (err) {
-//       console.error("Error sending to Letta:", err);
-//       setError("Failed to process content with Letta AI");
-//       throw err;
-//     } finally {
-//       setIsProcessing(false);
-//     }
-//   };
-
-//   const handleUpload = async () => {
-//     console.log("inside on click")
-//     try {
-//       let content = "";
-//       let contentType = "";
-
-//       // Determine content based on upload type
-//       if (uploadType === "text") {
-//         content = textContent;
-//         contentType = "text";
-//       } else if (uploadType === "link") {
-//         content = linkUrl;
-//         contentType = "link";
-//       } else if (uploadType === "file") {
-//         content = "File upload processing (implement file handling)";
-//         contentType = "file";
-//       }
-
-//       // Send to Letta
-//       await sendToLetta(content, contentType);
-
-//       // Show success
-//       setShowSuccess(true);
-//       setTimeout(() => {
-//         setShowSuccess(false);
-//         setUploadType(null);
-//         setTextContent("");
-//         setLinkUrl("");
-//       }, 2000);
-//     } catch (err) {
-//       console.error("Upload failed:", err);
-//     }
-//   };
-
-//   const topics = [
-//     "Machine Learning",
-//     "Organic Chemistry",
-//     "Spanish Vocabulary",
-//     "Art History",
-//   ];
-//   // const client = new LettaClient({ baseUrl: "http://localhost:8283" });
-
-//   return (
-//     <div className="p-8">
-//       <div className="max-w-4xl mx-auto">
-//         <div className="mb-8">
-//           <h1 className="text-slate-900 mb-2">Upload Content</h1>
-//           <p className="text-slate-600">
-//             Add learning materials to your topics
-//           </p>
-//         </div>
-
-//         {showSuccess && (
-//           <Alert className="mb-6 border-green-200 bg-green-50">
-//             <Check className="w-4 h-4 text-green-600" />
-//             <AlertDescription className="text-green-800">
-//               Content uploaded successfully! AI is analyzing your materials...
-//             </AlertDescription>
-//           </Alert>
-//         )}
-
-//         <Card className="mb-6">
-//           <CardHeader>
-//             <CardTitle>Select Topic</CardTitle>
-//             <CardDescription>
-//               Choose which topic this content belongs to
-//             </CardDescription>
-//           </CardHeader>
-//           <CardContent>
-//             <Select value={selectedTopic} onValueChange={setSelectedTopic}>
-//               <SelectTrigger>
-//                 <SelectValue placeholder="Select a topic" />
-//               </SelectTrigger>
-//               <SelectContent>
-//                 {topics.map((topic) => (
-//                   <SelectItem key={topic} value={topic}>
-//                     {topic}
-//                   </SelectItem>
-//                 ))}
-//               </SelectContent>
-//             </Select>
-//           </CardContent>
-//         </Card>
-
-//         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-//           <Card
-//             className={`cursor-pointer transition-all hover:shadow-md ${
-//               uploadType === "file" ? "ring-2 ring-blue-500" : ""
-//             }`}
-//             onClick={() => setUploadType("file")}
-//           >
-//             <CardContent className="pt-6 text-center">
-//               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-//                 <Upload className="w-6 h-6 text-blue-600" />
-//               </div>
-//               <h3 className="text-slate-900 mb-1">Upload Files</h3>
-//               <p className="text-slate-600 text-sm">
-//                 PDFs, images, handwritten notes
-//               </p>
-//             </CardContent>
-//           </Card>
-
-//           <Card
-//             className={`cursor-pointer transition-all hover:shadow-md ${
-//               uploadType === "text" ? "ring-2 ring-blue-500" : ""
-//             }`}
-//             onClick={() => setUploadType("text")}
-//           >
-//             <CardContent className="pt-6 text-center">
-//               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-//                 <FileText className="w-6 h-6 text-green-600" />
-//               </div>
-//               <h3 className="text-slate-900 mb-1">Paste Text</h3>
-//               <p className="text-slate-600 text-sm">
-//                 Notes, excerpts, definitions
-//               </p>
-//             </CardContent>
-//           </Card>
-
-//           <Card
-//             className={`cursor-pointer transition-all hover:shadow-md ${
-//               uploadType === "link" ? "ring-2 ring-blue-500" : ""
-//             }`}
-//             onClick={() => setUploadType("link")}
-//           >
-//             <CardContent className="pt-6 text-center">
-//               <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-//                 <LinkIcon className="w-6 h-6 text-purple-600" />
-//               </div>
-//               <h3 className="text-slate-900 mb-1">Add Link</h3>
-//               <p className="text-slate-600 text-sm">
-//                 Videos, articles, resources
-//               </p>
-//             </CardContent>
-//           </Card>
-//         </div>
-
-//         {uploadType === "file" && (
-//           <Card>
-//             <CardHeader>
-//               <CardTitle>Upload Files</CardTitle>
-//             </CardHeader>
-//             <CardContent>
-//               <div className="border-2 border-dashed border-slate-300 rounded-lg p-12 text-center hover:border-blue-400 transition-colors cursor-pointer">
-//                 <Upload className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-//                 <p className="text-slate-600 mb-2">
-//                   Drag and drop files here, or click to browse
-//                 </p>
-//                 <p className="text-slate-500 text-sm">
-//                   Supports PDF, PNG, JPG, and other image formats
-//                 </p>
-//                 <input
-//                   type="file"
-//                   className="hidden"
-//                   multiple
-//                   accept=".pdf,.png,.jpg,.jpeg"
-//                 />
-//               </div>
-//               <div className="flex justify-end mt-4">
-//                 <Button
-//                   onClick={handleUpload}
-//                   disabled={!selectedTopic || isProcessing}
-//                 >
-//                   {isProcessing ? "Processing..." : "Process Upload"}
-//                 </Button>
-//               </div>
-//             </CardContent>
-//           </Card>
-//         )}
-
-//         {uploadType === "text" && (
-//           <Card>
-//             <CardHeader>
-//               <CardTitle>Paste Text Content</CardTitle>
-//             </CardHeader>
-//             <CardContent>
-//               <div className="space-y-4">
-//                 <div>
-//                   <Label htmlFor="text-content">Content</Label>
-//                   <Textarea
-//                     id="text-content"
-//                     placeholder="Paste your notes, definitions, or any text content here..."
-//                     value={textContent}
-//                     onChange={(e) => setTextContent(e.target.value)}
-//                     className="min-h-[200px] mt-2"
-//                   />
-//                 </div>
-//                 <div className="flex justify-end">
-//                   <Button
-//                     onClick={handleUpload}
-//                     disabled={!selectedTopic || !textContent}
-//                   >
-//                     Process Content
-//                   </Button>
-//                 </div>
-//               </div>
-//             </CardContent>
-//           </Card>
-//         )}
-
-//         {uploadType === "link" && (
-//           <Card>
-//             <CardHeader>
-//               <CardTitle>Add Link</CardTitle>
-//             </CardHeader>
-//             <CardContent>
-//               <div className="space-y-4">
-//                 <div>
-//                   <Label htmlFor="link-url">URL</Label>
-//                   <Input
-//                     id="link-url"
-//                     type="url"
-//                     placeholder="https://example.com/article"
-//                     value={linkUrl}
-//                     onChange={(e) => setLinkUrl(e.target.value)}
-//                     className="mt-2"
-//                   />
-//                 </div>
-//                 <p className="text-slate-600 text-sm">
-//                   Supports YouTube videos, articles, and web pages
-//                 </p>
-//                 <div className="flex justify-end">
-//                   <Button
-//                     onClick={handleUpload}
-//                     disabled={!selectedTopic || !linkUrl}
-//                   >
-//                     Process Link
-//                   </Button>
-//                 </div>
-//               </div>
-//             </CardContent>
-//           </Card>
-//         )}
-//       </div>
-//     </div>
-//   );
-// }
-
 import { useState } from "react";
 import {
   Upload,
@@ -383,43 +57,31 @@ type OutputStructure = {
   flashcards: any[];
 };
 
-/** Parse Letta messages into JSON.
- *  Handles raw JSON, ```json fenced code, and best-effort object extraction.
- */
-function extractJsonFromLetta(messages: any[]): OutputStructure | null {
-  const last = [...messages]
-    .reverse()
-    .find((m) => m.role === "assistant" && Array.isArray(m.content));
+/** Extract JSON object from Letta message response */
+function extractJsonFromLetta(messages: any[]): any {
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return null;
+  }
 
-  const textChunk = last?.content?.find?.((c: any) => c.type === "text")?.text;
-  if (!textChunk || typeof textChunk !== "string") return null;
+  // Letta typically returns messages as an array; get the last one
+  const lastMessage = messages[messages.length - 1];
+  
+  // Try to extract JSON from message text
+  const messageText = lastMessage?.message || lastMessage?.content || String(lastMessage);
+  
+  // Find JSON object in the text (between first { and last })
+  const jsonMatch = messageText.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    console.warn("No JSON found in Letta response");
+    return null;
+  }
 
-  // Try direct JSON
   try {
-    return JSON.parse(textChunk);
-  } catch {}
-
-  // Try fenced ```json blocks
-  const fenceMatch =
-    textChunk.match(/```json\s*([\s\S]*?)```/i) ||
-    textChunk.match(/```\s*([\s\S]*?)```/i);
-
-  if (fenceMatch?.[1]) {
-    try {
-      return JSON.parse(fenceMatch[1]);
-    } catch {}
+    return JSON.parse(jsonMatch[0]);
+  } catch (e) {
+    console.error("Failed to parse JSON from Letta:", e);
+    return null;
   }
-
-  // Try first JSON-looking object substring
-  const s = textChunk.indexOf("{");
-  const e = textChunk.lastIndexOf("}");
-  if (s !== -1 && e > s) {
-    try {
-      return JSON.parse(textChunk.slice(s, e + 1));
-    } catch {}
-  }
-
-  return null;
 }
 
 /** Ensure the expected top-level shape even if Letta is loose */
@@ -509,6 +171,7 @@ export function UploadContent() {
   );
   const [textContent, setTextContent] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState("");
@@ -539,6 +202,47 @@ export function UploadContent() {
     return 1;
   };
 
+  /** Convert File to base64 string */
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Extract base64 part after the comma
+        const base64 = result.split(",")[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  /** Handle file selection from input or drag-drop */
+  const handleFileSelect = (files: FileList | null) => {
+    if (!files) return;
+    const imageFiles = Array.from(files).filter((file) =>
+      file.type.startsWith("image/") || file.type === "application/pdf"
+    );
+    if (imageFiles.length === 0) {
+      setError("Please select valid image or PDF files");
+      return;
+    }
+    setUploadedFiles(imageFiles);
+    setError("");
+  };
+
+  /** Handle drag and drop */
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleFileSelect(e.dataTransfer.files);
+  };
+
   /** Send to Letta, parse output, coerce questions to strict schema, attach tagId */
   const sendToLetta = async (content: string, contentType: string) => {
     try {
@@ -554,9 +258,9 @@ export function UploadContent() {
 
       // 2) Ask Letta
       const messageContent = `Topic: ${selectedTopic}
-Content Type: ${contentType}
 
-${content}`.trim();
+      Content Type: ${contentType}
+      ${content}`.trim();
 
       const response = await client.agents.messages.create(agentId, {
         messages: [
@@ -579,7 +283,7 @@ ${content}`.trim();
       if (!parsed) {
         throw new Error("Could not parse JSON from Letta response.");
       }
-
+          
       const normalized = normalizeTop(parsed, selectedTopic, contentType);
 
       // 4) Coerce EVERY quiz question into your required shape and attach tagId
@@ -606,7 +310,7 @@ ${content}`.trim();
       // TODO: persist `enriched` to your backend / DB
       // await fetch("/api/content", { method: "POST", body: JSON.stringify(enriched) });
 
-      return enriched;
+      return {quiz_questions, flashcards}
     } catch (err: any) {
       console.error("Error sending to Letta:", err);
       setError(err?.message || "Failed to process content with Letta AI");
@@ -617,7 +321,6 @@ ${content}`.trim();
   };
 
   const handleUpload = async () => {
-    console.log("inside on click");
     try {
       let content = "";
       let contentType = "";
@@ -630,8 +333,31 @@ ${content}`.trim();
         content = linkUrl;
         contentType = "link";
       } else if (uploadType === "file") {
-        content = "File upload processing (implement file handling)";
-        contentType = "file";
+        // Convert uploaded files to base64 strings
+        if (uploadedFiles.length === 0) {
+          setError("No files selected.");
+          return;
+        }
+
+        try {
+          const fileContents = await Promise.all(
+            uploadedFiles.map(async (file) => {
+              const base64 = await fileToBase64(file);
+              return {
+                fileName: file.name,
+                fileType: file.type,
+                size: file.size,
+                content: base64,
+              };
+            })
+          );
+
+          content = JSON.stringify(fileContents);
+          contentType = "file";
+        } catch (err) {
+          setError("Failed to read files. Please try again.");
+          return;
+        }
       } else {
         setError("Please choose an upload method.");
         return;
@@ -652,6 +378,7 @@ ${content}`.trim();
         setUploadType(null);
         setTextContent("");
         setLinkUrl("");
+        setUploadedFiles([]);
       }, 2000);
     } catch (err) {
       console.error("Upload failed:", err);
@@ -774,7 +501,11 @@ ${content}`.trim();
               <CardTitle>Upload Files</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="border-2 border-dashed border-slate-300 rounded-lg p-12 text-center hover:border-blue-400 transition-colors cursor-pointer">
+              <div
+                className="border-2 border-dashed border-slate-300 rounded-lg p-12 text-center hover:border-blue-400 transition-colors cursor-pointer"
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+              >
                 <Upload className="w-12 h-12 text-slate-400 mx-auto mb-4" />
                 <p className="text-slate-600 mb-2">
                   Drag and drop files here, or click to browse
@@ -787,12 +518,60 @@ ${content}`.trim();
                   className="hidden"
                   multiple
                   accept=".pdf,.png,.jpg,.jpeg"
+                  onChange={(e) => handleFileSelect(e.target.files)}
+                  onClick={(e) => {
+                    (e.target as HTMLInputElement).value = '';
+                  }}
                 />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const input = document.querySelector(
+                      'input[type="file"]'
+                    ) as HTMLInputElement;
+                    input?.click();
+                  }}
+                  className="text-blue-600 hover:underline"
+                >
+                  click to browse
+                </button>
               </div>
+
+              {uploadedFiles.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="font-semibold text-slate-900 mb-2">
+                    Selected Files ({uploadedFiles.length})
+                  </h4>
+                  <ul className="space-y-2">
+                    {uploadedFiles.map((file, idx) => (
+                      <li
+                        key={idx}
+                        className="flex items-center justify-between p-2 bg-slate-100 rounded"
+                      >
+                        <span className="text-slate-700 text-sm">
+                          {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUploadedFiles(
+                              uploadedFiles.filter((_, i) => i !== idx)
+                            );
+                          }}
+                          className="text-red-600 hover:text-red-800 text-sm"
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               <div className="flex justify-end mt-4">
                 <Button
                   onClick={handleUpload}
-                  disabled={!selectedTopic || isProcessing}
+                  disabled={!selectedTopic || uploadedFiles.length === 0 || isProcessing}
                 >
                   {isProcessing ? "Processing..." : "Process Upload"}
                 </Button>
