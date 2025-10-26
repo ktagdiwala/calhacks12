@@ -17,6 +17,16 @@ interface Topic {
   flashcards?: any[];
 }
 
+// Color variants that cycle through topics
+const COLOR_VARIANTS = [
+  { bg: 'bg-blue-50', border: 'border-blue-200', icon: 'text-blue-500', badge: 'bg-blue-100 text-blue-700' },
+  { bg: 'bg-purple-50', border: 'border-purple-200', icon: 'text-purple-500', badge: 'bg-purple-100 text-purple-700' },
+  { bg: 'bg-green-50', border: 'border-green-200', icon: 'text-green-500', badge: 'bg-green-100 text-green-700' },
+  { bg: 'bg-rose-50', border: 'border-rose-200', icon: 'text-rose-500', badge: 'bg-rose-100 text-rose-700' },
+  { bg: 'bg-orange-50', border: 'border-orange-200', icon: 'text-orange-500', badge: 'bg-orange-100 text-orange-700' },
+  { bg: 'bg-indigo-50', border: 'border-indigo-200', icon: 'text-indigo-500', badge: 'bg-indigo-100 text-indigo-700' },
+];
+
 export function TopicsPage() {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [newTopicName, setNewTopicName] = useState('');
@@ -67,6 +77,7 @@ export function TopicsPage() {
       setNewTopicName('');
       setNewTopicDescription('');
       setIsDialogOpen(false);
+      
     } catch (err) {
       console.error('Error creating topic:', err);
       setError('Failed to create topic. Please try again.');
@@ -75,6 +86,10 @@ export function TopicsPage() {
 
   const handleDeleteTopic = (id: number) => {
     setTopics(topics.filter(topic => topic.id !== id));
+  };
+
+  const getColorVariant = (index: number) => {
+    return COLOR_VARIANTS[index % COLOR_VARIANTS.length];
   };
 
   return (
@@ -93,7 +108,7 @@ export function TopicsPage() {
                 New Topic
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="bg-white">
               <DialogHeader>
                 <DialogTitle>Create New Topic</DialogTitle>
                 <DialogDescription>
@@ -148,39 +163,42 @@ export function TopicsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {topics.map((topic) => (
-              <Card key={topic.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <Tag className="w-5 h-5 text-slate-400" />
-                      <CardTitle>{topic.name}</CardTitle>
+            {topics.map((topic, index) => {
+              const colorVariant = getColorVariant(index);
+              return (
+                <Card key={topic.id} className={`${colorVariant.bg} border ${colorVariant.border} hover:shadow-lg transition-shadow`}>
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <Tag className={`w-5 h-5 ${colorVariant.icon}`} />
+                        <CardTitle>{topic.name}</CardTitle>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteTopic(topic.id)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Trash2 className="w-4 h-4 text-slate-400 hover:text-red-500" />
+                      </Button>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteTopic(topic.id)}
-                      className="h-8 w-8 p-0"
-                    >
-                      <Trash2 className="w-4 h-4 text-slate-400 hover:text-red-500" />
-                    </Button>
-                  </div>
-                  <CardDescription>{topic.description || 'No description'}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-slate-600">
-                      <FileText className="w-4 h-4" />
-                      <span>{(topic.quizQuestions?.length || 0) + (topic.flashcards?.length || 0)} items</span>
+                    <CardDescription>{topic.description || 'No description'}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-slate-600">
+                        <FileText className="w-4 h-4" />
+                        <span>{(topic.quizQuestions?.length || 0) + (topic.flashcards?.length || 0)} items</span>
+                      </div>
+                      <Badge className={colorVariant.badge}>
+                        <Tag className="w-3 h-3 mr-1" />
+                        Active
+                      </Badge>
                     </div>
-                    <Badge variant="secondary">
-                      <Tag className="w-3 h-3 mr-1" />
-                      Active
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
