@@ -1,18 +1,20 @@
-var createError = require('http-errors');
+var createError = require("http-errors");
 
 module.exports = (app) => {
-    app.use(function (req, res, next) {
-        next(createError(404));
+  app.use(function (req, res, next) {
+    next(createError(404));
+  });
+
+  // error handler
+  app.use(function (err, req, res, next) {
+    console.error("Error caught by handler:", {
+      message: err.message,
+      status: err.status || 500,
+      stack: err.stack,
     });
-    
-    // error handler
-    app.use(function (err, req, res, next) {
-        // set locals, only providing error in development
-        res.locals.message = err.message;
-        res.locals.error = req.app.get('env') === 'development' ? err : {};
-    
-        // render the error page
-        res.status(err.status || 500);
-        res.render('error');
+    res.status(err.status || 500).json({
+      error: err.message,
+      ...(req.app.get("env") === "development" && { stack: err.stack }),
     });
+  });
 };

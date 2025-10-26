@@ -14,15 +14,17 @@ datasource db {
 
 
 model User {
-  id        Int      @id @default(autoincrement())
+  id    Int      @id @default(autoincrement())
   email     String   @unique
   username  String   @unique
   password  String   // Hashed password
   authId    String   @unique
   
   // Relations
+  tags      Tag[]
   logs      Log[]
   userInputs UserInput[]
+  quizQuestions QuizQuestion[]
   
   @@map("users")
 }
@@ -32,7 +34,11 @@ model Tag {
   name        String   @unique
   description String?
   
+  // Foreign keys
+  userId      Int
+  
   // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   quizQuestions QuizQuestion[]
   flashcards    Flashcard[]
   logs          Log[]
@@ -46,11 +52,15 @@ model QuizQuestion {
   correctAnswer String
   type          QuestionType
   sourceFile    String?
+  explanation   String?
+  options       String[] // These are comma separated values
   
   // Foreign keys
+  userId        Int
   tagId         Int
   
   // Relations
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   tag           Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
   logs          Log[]
   
@@ -66,6 +76,7 @@ enum QuestionType {
 model Flashcard {
   id          Int      @id @default(autoincrement())
   information String
+  rating      Int?
   
   // Foreign keys
   tagId       Int

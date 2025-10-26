@@ -9,43 +9,33 @@ router.get("/", (req, res) => {
   res.json({ status: "ok", message: "API is running" });
 });
 
-/* SIGN UP - PUBLIC */
+/* SIGN UP - PUBLIC - DEMO MODE */
 router.post("/auth/signup", async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ error: "Email and password are required" });
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
     }
 
-    // Create user in Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-
-    if (authError) {
-      return res.status(400).json({ error: authError.message });
-    }
-
-    // Create user in database
+    // DEMO MODE: Create user directly in database
+    // No Supabase Auth required for demo
     const user = await prisma.user.create({
       data: {
         email,
         username: email.split("@")[0], // Use email prefix as username
-        password: "supabase_managed", // Password is managed by Supabase Auth
-        authId: authData.user.id,
+        password: password || "demo_password", // Use provided password or default
+        authId: `demo_${email}`, // Generate a fake authId
       },
     });
 
     res.status(201).json({
-      message: "User created successfully. Please verify your email.",
+      message: "User created successfully",
       user: {
         id: user.id,
         email: user.email,
         username: user.username,
       },
-      session: authData.session,
     });
   } catch (error) {
     if (error.code === "P2002") {
@@ -55,45 +45,44 @@ router.post("/auth/signup", async (req, res, next) => {
   }
 });
 
-/* SIGN IN - PUBLIC */
+/* SIGN IN - PUBLIC - DEMO MODE: ANY VALID EMAIL */
 router.post("/auth/signin", async (req, res, next) => {
   try {
+    console.log("POST /auth/signin - Request body:", req.body);
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ error: "Email and password are required" });
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
     }
 
-    // Sign in with Supabase Auth
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
 
-    if (error) {
-      return res.status(401).json({ error: error.message });
+    const user = await prisma.user
+      .findUnique({
+        where: { email: email },
+      })
+      .catch((err) => {
+        console.error("Database query error:", err);
+        throw err;
+      });
+
+    if (!user) {
+      return res
+        .status(401)
+        .json({ error: "User not found. Please sign up first." });
     }
 
-    // Fetch user from database
-    const user = await prisma.user.findUnique({
-      where: { authId: data.user.id },
-      include: {
-        logs: true,
-        userInputs: true,
-      },
-    });
-
-    res.json({
+    // DEMO MODE: Skip password validation, just return the user
+    // In production, validate password against Supabase
+    return res.json({
       message: "Signed in successfully",
-      session: data.session,
+      session: null, // No real session in demo mode
       user,
     });
   } catch (error) {
+    console.error("Full error:", error);
     next(error);
   }
-});
-
-/* SIGN OUT - PROTECTED */
+}); /* SIGN OUT - PROTECTED */
 router.post("/auth/signout", authenticateUser, async (req, res, next) => {
   try {
     res.json({ message: "Signed out successfully" });
