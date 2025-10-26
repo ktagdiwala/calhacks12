@@ -124,22 +124,47 @@ async function main() {
     tags[tag.name] = tag;
   }
 
-  // Helper to create quiz questions for a tag
+  // Helper to create quiz questions for a tag with varying confidence levels
   async function createQuestionsForTag(tagName, questions) {
     const created = [];
-    for (const q of questions) {
+    const tag = tags[tagName];
+    const confidenceLevels = [1, 2, 3, 4]; // Rotate through confidence levels
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i];
+      const confidence = confidenceLevels[i % confidenceLevels.length]; // Cycle through confidence levels
+
+      const questionData = {
+        question: q.question,
+        correctAnswer: q.correctAnswer,
+        type: q.type,
+        sourceFile: q.sourceFile || null,
+        explanation: q.explanation || `Explanation for ${q.correctAnswer}`, // Add default explanation if none provided
+        userId: tag.userId, // Add userId from the tag's owner
+        tagId: tag.id,
+      };
+
+      // Only add options if they are provided and is a MULTIPLE_CHOICE question
+      if (q.type === "MULTIPLE_CHOICE" && q.options && q.options.length > 0) {
+        questionData.options = q.options;
+      } else {
+        // For non-MULTIPLE_CHOICE or questions without options, set to empty array
+        questionData.options = [];
+      }
+
       const cq = await prisma.quizQuestion.create({
-        data: {
-          question: q.question,
-          correctAnswer: q.correctAnswer,
-          type: q.type,
-          sourceFile: q.sourceFile || null,
-          explanation: q.explanation || `Explanation for ${q.correctAnswer}`, // Add default explanation if none provided
-          options: q.options || [], // Use empty array if no options provided
-          tagId: tags[tagName].id,
-        },
+        data: questionData,
       });
       created.push(cq);
+
+      // Create a log entry with the confidence level to set the "rating" for the question
+      await prisma.log.create({
+        data: {
+          userId: tag.userId,
+          tagId: tag.id,
+          questionId: cq.id,
+          distanceUntilNextDate: [1, 2, 4, 7][confidence - 1], // Map confidence to days
+        },
+      });
     }
     return created;
   }

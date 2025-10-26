@@ -14,7 +14,7 @@ datasource db {
 
 
 model User {
-  id        Int      @id @default(autoincrement())
+  id    Int      @id @default(autoincrement())
   email     String   @unique
   username  String   @unique
   password  String   // Hashed password
@@ -24,6 +24,7 @@ model User {
   tags      Tag[]
   logs      Log[]
   userInputs UserInput[]
+  quizQuestions QuizQuestion[]
   
   @@map("users")
 }
@@ -55,9 +56,11 @@ model QuizQuestion {
   options       String[] // These are comma separated values
   
   // Foreign keys
+  userId        Int
   tagId         Int
   
   // Relations
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   tag           Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
   logs          Log[]
   

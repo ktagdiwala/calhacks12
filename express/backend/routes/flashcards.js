@@ -21,8 +21,8 @@ function calculateNextReviewDays(confidence) {
 function getQuestionFormat(confidence) {
   const formatMap = {
     1: "FLASHCARD", // Low confidence
-    2: "FLASHCARD", // Below average
-    3: "MULTIPLE_CHOICE", // Average
+    2: "MULTIPLE_CHOICE", // Below average
+    3: "FILL_IN_BLANK", // Average
     4: "EXPLAIN_PROMPT", // Good
   };
   return formatMap[confidence] || "FLASHCARD";
@@ -49,8 +49,8 @@ async function getRandomTags(userId, count = 3) {
   return shuffled.slice(0, Math.min(count, allTags.length));
 }
 
-// Get questions to show based on difficulty and confidence
-async function getQuestionsToShow(userId) {
+// Get questions to show based on average distanceUntilNextDate from past 7 days logs
+async function getQuestionsToShow(userId, simulateDays) {
   try {
     // Get 3 random tags
     const randomTags = await getRandomTags(userId, 3);
@@ -60,95 +60,106 @@ async function getQuestionsToShow(userId) {
     }
 
     const questionsToShow = [];
-    const tagIds = randomTags.map((tag) => tag.id);
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    // Get all flashcards and quiz questions from these tags
-    const flashcards = await prisma.flashcard.findMany({
-      where: {
-        tagId: {
-          in: tagIds,
+    // Process each tag
+    for (const tag of randomTags) {
+      // Get logs from past 7 days for this tag
+      const logsForTag = await prisma.log.findMany({
+        where: {
+          userId,
+          tagId: tag.id,
+          timestamp: {
+            gte: sevenDaysAgo,
+          },
         },
-      },
-      include: {
-        tag: true,
-      },
-    });
+      });
 
-    const quizQuestions = await prisma.quizQuestion.findMany({
-      where: {
-        tagId: {
-          in: tagIds,
-        },
-      },
-      include: {
-        tag: true,
-      },
-    });
-
-    // Get logs to calculate confidence based on review history
-    const logs = await prisma.log.findMany({
-      where: {
-        userId,
-        tagId: {
-          in: tagIds,
-        },
-      },
-      orderBy: {
-        timestamp: "desc",
-      },
-    });
-
-    // Create a map of the most recent log per question
-    const logMap = new Map();
-    logs.forEach((log) => {
-      const key = `question_${log.questionId}`;
-      if (!logMap.has(key)) {
-        logMap.set(key, log);
+      // Calculate average distanceUntilNextDate
+      let averageDistance = 0;
+      if (logsForTag.length > 0) {
+        const totalDistance = logsForTag.reduce(
+          (sum, log) => sum + log.distanceUntilNextDate,
+          0
+        );
+        averageDistance = totalDistance / logsForTag.length;
       }
-    });
 
-    // Process flashcards
-    flashcards.forEach((flashcard) => {
-      const confidence = flashcard.rating || 3;
-      const questionType = getQuestionFormat(confidence);
+      // Determine which question types to serve based on average distance
+      let questionTypesToServe = [];
 
-      // Only include flashcards that would be shown as flashcards
-      if (questionType === "FLASHCARD") {
-        questionsToShow.push({
-          id: flashcard.id,
-          question: flashcard.information,
-          typeOfQuestion: "FLASHCARD",
-          confidence,
-          tagId: flashcard.tagId,
-          tagName: flashcard.tag.name,
+      if (averageDistance > 5) {
+        // Serve EXPLAIN_PROMPT questions
+        questionTypesToServe = ["EXPLAIN_PROMPT"];
+      } else if (averageDistance > 2) {
+        // Serve FILL_IN_BLANK or MULTIPLE_CHOICE questions
+        questionTypesToServe = ["FILL_IN_BLANK", "MULTIPLE_CHOICE"];
+      } else {
+        // Show only flashcards for this tag
+        questionTypesToServe = ["FLASHCARD"];
+      }
+
+      // Get appropriate questions based on the thresholds
+      if (questionTypesToServe.includes("FLASHCARD")) {
+        // Get flashcards for this tag
+        const flashcards = await prisma.flashcard.findMany({
+          where: {
+            tagId: tag.id,
+          },
+          include: {
+            tag: true,
+          },
+        });
+
+        flashcards.forEach((flashcard) => {
+          questionsToShow.push({
+            id: flashcard.id,
+            question: flashcard.information,
+            typeOfQuestion: "FLASHCARD",
+            confidence: flashcard.rating || 3,
+            tagId: tag.id,
+            tagName: tag.name,
+            averageDistance,
+          });
+        });
+      } else {
+        // Get quiz questions of the specified types for this tag
+        const quizQuestions = await prisma.quizQuestion.findMany({
+          where: {
+            userId,
+            tagId: tag.id,
+            type: {
+              in: questionTypesToServe,
+            },
+          },
+          include: {
+            tag: true,
+          },
+        });
+
+        quizQuestions.forEach((question) => {
+          const questionObj = {
+            id: question.id,
+            question: question.question,
+            typeOfQuestion: question.type,
+            confidence: 3, // Default confidence
+            tagId: tag.id,
+            tagName: tag.name,
+            averageDistance,
+            correctAnswer: question.correctAnswer,
+            explanation: question.explanation,
+          };
+
+          // Include options if available
+          if (question.options && question.options.length > 0) {
+            questionObj.options = question.options;
+          }
+
+          questionsToShow.push(questionObj);
         });
       }
-    });
-
-    // Process quiz questions
-    quizQuestions.forEach((question) => {
-      const log = logMap.get(`question_${question.id}`);
-      const now = new Date();
-      let daysSinceLastReview = 0;
-
-      if (log) {
-        const timeDiff = now.getTime() - log.timestamp.getTime();
-        daysSinceLastReview = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-      }
-
-      const confidence = calculateConfidenceFromDays(daysSinceLastReview);
-      const questionType = getQuestionFormat(confidence);
-
-      questionsToShow.push({
-        id: question.id,
-        question: question.question,
-        typeOfQuestion: questionType,
-        confidence,
-        tagId: question.tagId,
-        tagName: question.tag.name,
-        daysSinceLastReview,
-      });
-    });
+    }
 
     return questionsToShow;
   } catch (error) {
@@ -303,9 +314,7 @@ router.get("/questions/user/:userId", async (req, res, next) => {
 
     const questions = await prisma.quizQuestion.findMany({
       where: {
-        tag: {
-          userId,
-        },
+        userId,
       },
       include: {
         tag: true,
@@ -326,10 +335,8 @@ router.get("/questions/tag/:tagId/user/:userId", async (req, res, next) => {
 
     const questions = await prisma.quizQuestion.findMany({
       where: {
+        userId,
         tagId,
-        tag: {
-          userId,
-        },
       },
       include: {
         tag: true,
@@ -345,8 +352,15 @@ router.get("/questions/tag/:tagId/user/:userId", async (req, res, next) => {
 /* POST new quiz question - PUBLIC */
 router.post("/questions", async (req, res, next) => {
   try {
-    const { question, correctAnswer, type, tagId, userId, explanation } =
-      req.body;
+    const {
+      question,
+      correctAnswer,
+      type,
+      tagId,
+      userId,
+      explanation,
+      options,
+    } = req.body;
 
     if (!question) {
       return res.status(400).json({ error: "Question is required" });
@@ -387,6 +401,8 @@ router.post("/questions", async (req, res, next) => {
         correctAnswer,
         type,
         explanation: explanation || null,
+        options: options || [], // Include options if provided
+        userId,
         tagId,
       },
       include: {
@@ -417,7 +433,7 @@ router.post("/questions/:questionId/answer", async (req, res, next) => {
       return res.status(400).json({ error: "userId is required" });
     }
 
-    // Get question and verify user owns the tag
+    // Get question and verify user owns the question
     const question = await prisma.quizQuestion.findUnique({
       where: { id: questionId },
       include: { tag: true },
@@ -427,7 +443,7 @@ router.post("/questions/:questionId/answer", async (req, res, next) => {
       return res.status(404).json({ error: "Question not found" });
     }
 
-    if (question.tag.userId !== userId) {
+    if (question.userId !== userId) {
       return res.status(403).json({ error: "Unauthorized" });
     }
 
@@ -492,9 +508,7 @@ router.get("/stats/user/:userId", async (req, res, next) => {
 
     const quizQuestionsCount = await prisma.quizQuestion.count({
       where: {
-        tag: {
-          userId,
-        },
+        userId,
       },
     });
 
@@ -663,11 +677,10 @@ router.post("/tags", async (req, res, next) => {
 /* GET questions to show for user - PUBLIC */
 router.get("/show/user/:userId", async (req, res, next) => {
   try {
-    console.log("here2");
     const userId = parseInt(req.params.userId);
-    console.log("Getting questions to show for user:", userId);
-    const questionsToShow = await getQuestionsToShow(userId);
+    let simulateDays = 3;
 
+    const questionsToShow = await getQuestionsToShow(userId, simulateDays);
     res.json({
       count: questionsToShow.length,
       questions: questionsToShow,
