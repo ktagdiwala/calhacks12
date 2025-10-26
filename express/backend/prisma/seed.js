@@ -84,6 +84,7 @@ async function main() {
           correctAnswer: q.correctAnswer,
           type: q.type,
           sourceFile: q.sourceFile || null,
+          explanation: q.explanation || `Explanation for ${q.correctAnswer}`,  // Add default explanation if none provided
           tagId: tags[tagName].id
         }
       });
@@ -100,17 +101,20 @@ async function main() {
     {
       question: 'What design pattern provides a way to access the elements of an aggregate object sequentially without exposing its underlying representation?',
       correctAnswer: 'Iterator',
-      type: 'FILL_IN_BLANK'
+      type: 'FILL_IN_BLANK',
+      explanation: 'The Iterator pattern provides a way to access elements of a collection sequentially without exposing its internal structure. This is commonly used in Java Collections and other frameworks to traverse different types of collections uniformly.'
     },
     {
       question: 'Which pattern would you use to ensure a class has only one instance and provide a global point of access to it?',
       correctAnswer: 'Singleton',
-      type: 'FILL_IN_BLANK'
+      type: 'FILL_IN_BLANK',
+      explanation: 'The Singleton pattern restricts instantiation of a class to one object and provides a global point of access. Common uses include configuration managers, connection pools, and thread pools where exactly one instance is needed.'
     },
     {
       question: 'Which pattern separates the construction of a complex object from its representation so that the same construction process can create different representations?',
       correctAnswer: 'Builder',
-      type: 'MULTIPLE_CHOICE'
+      type: 'MULTIPLE_CHOICE',
+      explanation: 'The Builder pattern lets you construct complex objects step by step. It is especially useful when an object needs to be created with numerous possible configurations. For example, building different types of documents (PDF, HTML) using the same construction process.'
     }
   ]));
 
@@ -138,17 +142,20 @@ async function main() {
     {
       question: 'What scheduling algorithm selects the process with the smallest next CPU burst?',
       correctAnswer: 'Shortest Job First',
-      type: 'FILL_IN_BLANK'
+      type: 'FILL_IN_BLANK',
+      explanation: 'Shortest Job First (SJF) minimizes average waiting time by selecting the process with the shortest expected CPU burst time next. While optimal for minimizing average wait time, it can lead to starvation of longer processes.'
     },
     {
       question: 'A process that is waiting for I/O is in which state?',
       correctAnswer: 'Blocked',
-      type: 'MULTIPLE_CHOICE'
+      type: 'MULTIPLE_CHOICE',
+      explanation: 'When a process requests I/O, it enters the Blocked (or Wait) state because it cannot proceed until the I/O operation completes. This allows other processes to use the CPU while waiting for I/O.'
     },
     {
       question: 'Calculate the effective access time if memory access = 100ns and TLB hit ratio is 90% with TLB access = 10ns (assume no page fault).',
       correctAnswer: '100 + 0.9*10? Actually compute: effective = 0.9*(10+100) + 0.1*(10+100) = 110',
-      type: 'FILL_IN_BLANK'
+      type: 'FILL_IN_BLANK',
+      explanation: 'The effective access time calculation considers both TLB and memory access times. With 90% TLB hit ratio: we always do memory access (100ns) plus TLB access (10ns). So total is always (10+100)ns = 110ns regardless of hit/miss as we ignore page faults.'
     }
   ]));
 
@@ -333,7 +340,14 @@ async function main() {
     for (const info of infos) {
       const exists = await prisma.flashcard.findFirst({ where: { information: info, tagId: tag.id } });
       if (!exists) {
-        await prisma.flashcard.create({ data: { information: info, tagId: tag.id } });
+        // Create new flashcard with initial rating of 1
+        await prisma.flashcard.create({ 
+          data: { 
+            information: info, 
+            tagId: tag.id,
+            rating: 1  // Set initial rating to 1
+          } 
+        });
       }
     }
   }
