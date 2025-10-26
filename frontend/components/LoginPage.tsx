@@ -92,7 +92,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
           <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <span className="text-white">SL</span>
           </div>
-          <h1 className="text-slate-900 mb-2">SpaceLearn</h1>
+          <h1 className="text-slate-900 mb-2">Dawned</h1>
           <p className="text-slate-600">Master anything with spaced repetition</p>
         </div>
 

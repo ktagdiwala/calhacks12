@@ -19,7 +19,8 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
   return (
     <aside className="w-64 bg-white border-r border-slate-200 flex flex-col">
       <div className="p-6">
-        <h1 className="text-slate-900">SpaceLearn</h1>
+        <h1 className="text-slate-900">Dawned</h1>
+
       </div>
       
       <nav className="flex-1 px-3">
