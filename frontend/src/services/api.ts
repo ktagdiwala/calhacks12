@@ -109,4 +109,47 @@ export const tagsAPI = {
   },
 };
 
+// AI Endpoints
+export const aiAPI = {
+  getTagIdByName: async (name: string, userId: number) => {
+    const response = await api.get('/api/ai/tags', {
+      params: {
+        name,
+        userId,
+      },
+    });
+    return response.data;
+  },
+
+  postFlashcards: async (
+    topic: string,
+    contentType: string,
+    flashcards: any[],
+    userId: number
+  ) => {
+    const response = await api.post('/api/ai/flashcards', {
+      topic,
+      content_type: contentType,
+      flashcards,
+      userId,
+    });
+    return response.data;
+  },
+
+  postQuizQuestions: async (
+    topic: string,
+    contentType: string,
+    quizQuestions: any[],
+    userId: number
+  ) => {
+    const response = await api.post('/api/ai/quiz-questions', {
+      topic,
+      content_type: contentType,
+      quiz_questions: quizQuestions,
+      userId,
+    });
+    return response.data;
+  },
+};
+
 export default api;

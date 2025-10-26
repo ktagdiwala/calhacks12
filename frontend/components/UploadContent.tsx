@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Upload,
   FileText,
   Link as LinkIcon,
   Check,
+  Loader,
 } from "lucide-react";
 import {
   Card,
@@ -25,6 +26,7 @@ import {
 } from "./ui/select";
 import { Alert, AlertDescription } from "./ui/alert";
 import { LettaClient } from "@letta-ai/letta-client";
+import { aiAPI, tagsAPI } from "../src/services/api";
 
 /* =========================================
    Types & Utils (no UI changes required)
@@ -175,6 +177,30 @@ export function UploadContent() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState("");
+  const [tags, setTags] = useState<Array<{ id: number; name: string }>>([]);
+  const [loadingTags, setLoadingTags] = useState(true);
+
+  // Fetch tags on component mount
+  useEffect(() => {
+    const fetchTags = async () => {
+      try {
+        const userIdStr = localStorage.getItem("userId");
+        if (userIdStr) {
+          const userId = parseInt(userIdStr, 10);
+          if (!isNaN(userId)) {
+            const fetchedTags = await tagsAPI.getTagsByUserId(userId);
+            setTags(fetchedTags);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching tags:", err);
+      } finally {
+        setLoadingTags(false);
+      }
+    };
+
+    fetchTags();
+  }, []);
 
   // Initialize Letta client
   const getLettaClient = () => {
@@ -186,20 +212,27 @@ export function UploadContent() {
   };
 
   /** Resolve tagId for the selected topic by querying your `tags` table.
-   * Replace with your real API call / DB query.
+   * Calls backend with topic name and userId from localStorage.
    */
   const fetchTagIdByName = async (name: string): Promise<number> => {
-    // Example 1: call your backend
-    // const res = await fetch(`/api/tags?name=${encodeURIComponent(name)}`);
-    // if (!res.ok) throw new Error("Failed to fetch tagId");
-    // const data = await res.json(); // e.g., { id: 42 }
-    // return data.id;
-
-    // Example 2: fallback mock while wiring up backend
     // Throw if name is empty to avoid silent failure
     if (!name) throw new Error("No topic selected");
-    // TODO: replace with real id; this just simulates a lookup
-    return 1;
+
+    // Get userId from localStorage
+    const userIdStr = localStorage.getItem("userId");
+    if (!userIdStr) throw new Error("User not authenticated");
+
+    const userId = parseInt(userIdStr, 10);
+    if (isNaN(userId)) throw new Error("Invalid user ID in storage");
+
+    try {
+      // Call backend using axios wrapper
+      const data = await aiAPI.getTagIdByName(name, userId);
+      return data.id;
+    } catch (error) {
+      console.error("Error fetching tagId:", error);
+      throw error;
+    }
   };
 
   /** Convert File to base64 string */
@@ -255,7 +288,7 @@ export function UploadContent() {
 
       // 1) Resolve tagId from your tags table
       const tagId = await fetchTagIdByName(selectedTopic);
-
+      console.log("Resolved tagId:", tagId);
       // 2) Ask Letta
       const messageContent = `Topic: ${selectedTopic}
 
@@ -297,20 +330,45 @@ export function UploadContent() {
         tagId
       );
 
-      // 6) Build final output structure
-      const quiz_questions = { quiz_questions: strictQuestions }
-      const flashcards = { flashcards: taggedFlashcards }
+      // 6) Get userId from localStorage
+      const userIdStr = localStorage.getItem("userId");
+      if (!userIdStr) throw new Error("User not authenticated");
+      const userId = parseInt(userIdStr, 10);
+      if (isNaN(userId)) throw new Error("Invalid user ID in storage");
 
-      console.log(quiz_questions);
-      console.log(flashcards);
+      // 7) POST flashcards to backend
+      if (taggedFlashcards.length > 0) {
+        try {
+          const flashcardsResponse = await aiAPI.postFlashcards(
+            selectedTopic,
+            contentType.toUpperCase(),
+            taggedFlashcards,
+            userId
+          );
+          console.log("Flashcards posted successfully:", flashcardsResponse);
+        } catch (err) {
+          console.error("Error posting flashcards:", err);
+          throw err;
+        }
+      }
 
-      // TODO call post on quiz questions
-      // TODO call post on flashcards
+      // 8) POST quiz questions to backend
+      if (strictQuestions.length > 0) {
+        try {
+          const quizResponse = await aiAPI.postQuizQuestions(
+            selectedTopic,
+            contentType.toUpperCase(),
+            strictQuestions,
+            userId
+          );
+          console.log("Quiz questions posted successfully:", quizResponse);
+        } catch (err) {
+          console.error("Error posting quiz questions:", err);
+          throw err;
+        }
+      }
 
-      // TODO: persist `enriched` to your backend / DB
-      // await fetch("/api/content", { method: "POST", body: JSON.stringify(enriched) });
-
-      return {quiz_questions, flashcards}
+      return { quiz_questions: strictQuestions, flashcards: taggedFlashcards };
     } catch (err: any) {
       console.error("Error sending to Letta:", err);
       setError(err?.message || "Failed to process content with Letta AI");
@@ -385,13 +443,6 @@ export function UploadContent() {
     }
   };
 
-  const topics = [
-    "Machine Learning",
-    "Organic Chemistry",
-    "Spanish Vocabulary",
-    "Art History",
-  ];
-
   return (
     <div className="p-8">
       <div className="max-w-4xl mx-auto">
@@ -419,6 +470,15 @@ export function UploadContent() {
           </Alert>
         )}
 
+        {isProcessing && (
+          <Alert className="mb-6 border-blue-200 bg-blue-50">
+            <Loader className="w-4 h-4 text-blue-600 animate-spin" />
+            <AlertDescription className="text-blue-800">
+              Processing your content... Please wait while we analyze and create flashcards and quiz questions.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <Card className="mb-6">
           <CardHeader>
             <CardTitle>Select Topic</CardTitle>
@@ -429,14 +489,20 @@ export function UploadContent() {
           <CardContent>
             <Select value={selectedTopic} onValueChange={setSelectedTopic}>
               <SelectTrigger>
-                <SelectValue placeholder="Select a topic" />
+                <SelectValue placeholder={loadingTags ? "Loading topics..." : "Select a topic"} />
               </SelectTrigger>
               <SelectContent>
-                {topics.map((topic) => (
-                  <SelectItem key={topic} value={topic}>
-                    {topic}
+                {tags.length === 0 ? (
+                  <SelectItem value="_empty" disabled>
+                    {loadingTags ? "Loading..." : "No topics available"}
                   </SelectItem>
-                ))}
+                ) : (
+                  tags.map((tag) => (
+                    <SelectItem key={tag.id} value={tag.name}>
+                      {tag.name}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </CardContent>
