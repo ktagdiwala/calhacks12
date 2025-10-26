@@ -28,11 +28,12 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     setLoading(true);
 
     try {
-      if (!loginEmail || !loginPassword) {
-        throw new Error('Please fill in all fields');
+      if (!loginEmail) {
+        throw new Error('Email is required');
       }
 
-      const response = await authAPI.signin(loginEmail, loginPassword);
+      // DEMO MODE: Password is optional
+      const response = await authAPI.signin(loginEmail, loginPassword || 'demo');
       onLogin({
         name: response.user?.username || loginEmail.split('@')[0],
         email: response.user?.email || loginEmail,
@@ -53,20 +54,13 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     setLoading(true);
 
     try {
-      if (!signupEmail || !signupPassword) {
-        throw new Error('Please fill in all fields');
+      if (!signupEmail) {
+        throw new Error('Email is required');
       }
 
-      if (signupPassword !== signupConfirmPassword) {
-        throw new Error('Passwords do not match');
-      }
-
-      if (signupPassword.length < 6) {
-        throw new Error('Password must be at least 6 characters');
-      }
-
-      await authAPI.signup(signupEmail, signupPassword);
-      setSuccess('Account created successfully! Please check your email to verify.');
+      // DEMO MODE: Password is optional
+      await authAPI.signup(signupEmail, signupPassword || 'demo_password');
+      setSuccess('Account created successfully!');
       
       setSignupEmail('');
       setSignupPassword('');
