@@ -1,78 +1,152 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
-import { Badge } from './ui/badge';
+import { Flashcard } from './Flashcard';
+import { tagsAPI } from '../src/services/api';
 
-interface Flashcard {
+interface FlashcardData {
   id: string;
-  topic: string;
-  content: string;
-  context: string;
+  question: string;
+  typeOfQuestion: string;
+  confidence: number;
+  tagId: number;
+  tagName: string;
+  daysSinceLastReview?: number;
 }
-
-const mockFlashcards: Flashcard[] = [
-  {
-    id: '1',
-    topic: 'Machine Learning',
-    content: 'A neural network is a series of algorithms that attempts to recognize underlying relationships in a set of data through a process that mimics the way the human brain operates.',
-    context: 'Deep Learning Fundamentals',
-  },
-  {
-    id: '2',
-    topic: 'Organic Chemistry',
-    content: 'The SN2 reaction is a type of nucleophilic substitution where the nucleophile attacks the carbon atom from the back side, causing a simultaneous departure of the leaving group.',
-    context: 'Nucleophilic Substitution Reactions',
-  },
-  {
-    id: '3',
-    topic: 'Spanish Vocabulary',
-    content: 'El desayuno - breakfast. Common phrase: "¿Qué quieres para el desayuno?" (What do you want for breakfast?)',
-    context: 'Daily Routines Vocabulary',
-  },
-];
 
 export function FlashcardsPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedConfidence, setSelectedConfidence] = useState<number | null>(null);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [flashcards, setFlashcards] = useState<FlashcardData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<number | null>(null);
 
-  const currentCard = mockFlashcards[currentIndex];
+  // Fetch user ID from localStorage (demo mode)
+  useEffect(() => {
+    const storedUserId = localStorage.getItem('userId');
+    if (storedUserId) {
+      setUserId(parseInt(storedUserId, 10));
+    }
+  }, []);
 
-  const handleConfidenceSelect = (level: number) => {
-    setSelectedConfidence(level);
-    setTimeout(() => {
-      if (currentIndex < mockFlashcards.length - 1) {
-        setCurrentIndex(currentIndex + 1);
-        setSelectedConfidence(null);
+  // Fetch flashcards for the user
+  useEffect(() => {
+    const fetchFlashcards = async () => {
+      if (!userId) return;
+
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await tagsAPI.getQuestionsToShow(userId);
+        console.log(data)
+        setFlashcards(data.questions || []);
+      } catch (err) {
+        console.error('Error fetching flashcards:', err);
+        setError('Failed to load flashcards. Please try again.');
+      } finally {
+        setLoading(false);
       }
-    }, 500);
+    };
+    fetchFlashcards();
+  }, [userId]);
+
+  // Reset submitted state when index changes
+  useEffect(() => {
+    setIsSubmitted(false);
+  }, [currentIndex]);
+
+  const currentCard = flashcards[currentIndex];
+
+  const handleConfidenceSelect = async (level: number, flashcardId: string) => {
+    if (!userId) {
+      console.error('User ID not found');
+      return;
+    }
+
+    try {
+      setSelectedConfidence(level);
+      
+      // Post the confidence rating to the backend
+      const response = await tagsAPI.submitFlashcardRating(flashcardId, level, userId);
+      console.log('Confidence rating submitted:', response);
+      
+      // Show success state
+      setIsSubmitted(true);
+      
+      // Move to next card after a short delay
+      setTimeout(() => {
+        if (currentIndex < flashcards.length - 1) {
+          setCurrentIndex(currentIndex + 1);
+          setSelectedConfidence(null);
+          setIsSubmitted(false);
+        }
+      }, 1500);
+    } catch (error) {
+      console.error('Error submitting confidence rating:', error);
+      setError('Failed to submit confidence rating. Please try again.');
+      setSelectedConfidence(null);
+    }
   };
 
   const handlePrevious = () => {
     if (currentIndex > 0) {
       setCurrentIndex(currentIndex - 1);
       setSelectedConfidence(null);
+      setIsSubmitted(false);
     }
   };
 
   const handleNext = () => {
-    if (currentIndex < mockFlashcards.length - 1) {
+    if (currentIndex < flashcards.length - 1) {
       setCurrentIndex(currentIndex + 1);
       setSelectedConfidence(null);
+      setIsSubmitted(false);
     }
   };
 
   const handleRestart = () => {
     setCurrentIndex(0);
     setSelectedConfidence(null);
+    setIsSubmitted(false);
   };
 
-  const confidenceLevels = [
-    { level: 1, label: 'Not Confident', color: 'bg-red-500 hover:bg-red-600' },
-    { level: 2, label: 'Somewhat Confident', color: 'bg-orange-500 hover:bg-orange-600' },
-    { level: 3, label: 'Confident', color: 'bg-yellow-500 hover:bg-yellow-600' },
-    { level: 4, label: 'Very Confident', color: 'bg-green-500 hover:bg-green-600' },
-  ];
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="max-w-3xl mx-auto">
+          <div className="flex justify-center items-center py-12">
+            <p className="text-slate-600">Loading flashcards...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="max-w-3xl mx-auto">
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md text-red-800">
+            {error}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (flashcards.length === 0) {
+    return (
+      <div className="p-8">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center py-12">
+            <p className="text-slate-600">No flashcards available. Create some topics and questions to get started!</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8">
@@ -85,10 +159,10 @@ export function FlashcardsPage() {
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-slate-600">
-              Card {currentIndex + 1} of {mockFlashcards.length}
+              Card {currentIndex + 1} of {flashcards.length}
             </span>
             <div className="flex gap-1">
-              {mockFlashcards.map((_, index) => (
+              {flashcards.map((_, index) => (
                 <div
                   key={index}
                   className={`w-2 h-2 rounded-full ${
@@ -104,43 +178,15 @@ export function FlashcardsPage() {
           </Button>
         </div>
 
-        <Card className="mb-6">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <Badge variant="secondary">{currentCard.topic}</Badge>
-              <span className="text-slate-500 text-sm">{currentCard.context}</span>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="bg-slate-50 rounded-lg p-8 min-h-[200px] flex items-center justify-center">
-              <p className="text-slate-700 text-center leading-relaxed">
-                {currentCard.content}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>How confident do you feel about this information?</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {confidenceLevels.map((item) => (
-                <Button
-                  key={item.level}
-                  onClick={() => handleConfidenceSelect(item.level)}
-                  className={`${item.color} text-white h-auto py-4 flex flex-col gap-1 ${
-                    selectedConfidence === item.level ? 'ring-2 ring-offset-2 ring-slate-900' : ''
-                  }`}
-                >
-                  <span>{item.level}</span>
-                  <span className="text-xs opacity-90">{item.label}</span>
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <Flashcard
+          id={currentCard.id}
+          topic={currentCard.tagName}
+          content={currentCard.question}
+          context={currentCard.typeOfQuestion}
+          onConfidenceSelect={handleConfidenceSelect}
+          selectedConfidence={selectedConfidence}
+          isSubmitted={isSubmitted}
+        />
 
         <div className="flex items-center justify-between mt-6">
           <Button
@@ -155,7 +201,7 @@ export function FlashcardsPage() {
           <Button
             variant="outline"
             onClick={handleNext}
-            disabled={currentIndex === mockFlashcards.length - 1}
+            disabled={currentIndex === flashcards.length - 1}
             className="gap-2"
           >
             Next
