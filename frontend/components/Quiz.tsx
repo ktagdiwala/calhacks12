@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -7,44 +7,17 @@ import { Progress } from './ui/progress';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Label } from './ui/label';
 import { CheckCircle, XCircle, ChevronRight } from 'lucide-react';
+import { tagsAPI } from '../src/services/api';
 
 interface Question {
   id: number;
   topic: string;
-  type: 'multiple-choice' | 'fill-blank' | 'calculation';
+  type: string;
   question: string;
   options?: string[];
   correctAnswer: string;
   explanation: string;
 }
-
-const questions: Question[] = [
-  {
-    id: 1,
-    topic: 'Mathematics',
-    type: 'multiple-choice',
-    question: 'What is the derivative of x²?',
-    options: ['x', '2x', 'x²', '2x²'],
-    correctAnswer: '2x',
-    explanation: 'Using the power rule: d/dx(xⁿ) = n·xⁿ⁻¹, so d/dx(x²) = 2x',
-  },
-  {
-    id: 2,
-    topic: 'Physics',
-    type: 'fill-blank',
-    question: 'The speed of light in vacuum is approximately ___ m/s.',
-    correctAnswer: '300000000',
-    explanation: 'The speed of light in vacuum is approximately 3 × 10⁸ m/s or 300,000,000 m/s',
-  },
-  {
-    id: 3,
-    topic: 'Chemistry',
-    type: 'calculation',
-    question: 'Calculate the molar mass of H₂O (H=1, O=16)',
-    correctAnswer: '18',
-    explanation: 'H₂O = 2(1) + 16 = 2 + 16 = 18 g/mol',
-  },
-];
 
 export function Quiz() {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -52,6 +25,88 @@ export function Quiz() {
   const [showResult, setShowResult] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [score, setScore] = useState(0);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<number | null>(null);
+
+  // Fetch user ID from localStorage
+  useEffect(() => {
+    const storedUserId = localStorage.getItem('userId');
+    if (storedUserId) {
+      setUserId(parseInt(storedUserId, 10));
+    }
+  }, []);
+
+  // Fetch quiz questions for the user
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      if (!userId) return;
+
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await tagsAPI.getQuestionsToShow(userId);
+        
+        // Filter only quiz questions (not flashcards) and map to Question format
+        const quizQuestions = (data.questions || [])
+          .filter((q: any) => q.typeOfQuestion !== 'FLASHCARD')
+          .map((q: any) => ({
+            id: q.id,
+            topic: q.tagName,
+            type: q.typeOfQuestion || 'MULTIPLE_CHOICE',
+            question: q.question,
+            options: q.options || [],
+            correctAnswer: q.correctAnswer || '',
+            explanation: q.explanation || 'No explanation provided',
+          }));
+        console.log("Fetched quiz questions:", quizQuestions);
+        setQuestions(quizQuestions);
+      } catch (err) {
+        console.error('Error fetching quiz questions:', err);
+        setError('Failed to load quiz questions. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchQuestions();
+  }, [userId]);
+
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="max-w-3xl mx-auto">
+          <div className="flex justify-center items-center py-12">
+            <p className="text-slate-600">Loading quiz questions...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="max-w-3xl mx-auto">
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md text-red-800">
+            {error}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (questions.length === 0) {
+    return (
+      <div className="p-8">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center py-12">
+            <p className="text-slate-600">No quiz questions available. Create some topics and questions to get started!</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const currentQuestion = questions[currentIndex];
   const progress = ((currentIndex + 1) / questions.length) * 100;
@@ -75,6 +130,7 @@ export function Quiz() {
 
   const renderQuestionInput = () => {
     switch (currentQuestion.type) {
+      case 'MULTIPLE_CHOICE':
       case 'multiple-choice':
         return (
           <RadioGroup value={userAnswer} onValueChange={setUserAnswer}>
@@ -91,8 +147,21 @@ export function Quiz() {
           </RadioGroup>
         );
       
+      case 'FILL_IN_BLANK':
+      case 'EXPLAIN_PROMPT':
       case 'fill-blank':
       case 'calculation':
+        return (
+          <Input
+            placeholder="Type your answer..."
+            value={userAnswer}
+            onChange={(e) => setUserAnswer(e.target.value)}
+            className="text-lg p-6"
+            disabled={showResult}
+          />
+        );
+      
+      default:
         return (
           <Input
             placeholder="Type your answer..."
