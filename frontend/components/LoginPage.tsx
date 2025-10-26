@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { LogIn, Mail, Lock, User, AlertCircle, Loader } from 'lucide-react';
+import { LogIn, Mail, Lock, AlertCircle, Loader } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { supabase } from '../src/lib/supabase';
 import { authAPI } from '../src/services/api';
 
 interface LoginPageProps {
@@ -15,7 +14,6 @@ interface LoginPageProps {
 export function LoginPage({ onLogin }: LoginPageProps) {
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
-  const [signupName, setSignupName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
@@ -55,7 +53,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     setLoading(true);
 
     try {
-      if (!signupName || !signupEmail || !signupPassword) {
+      if (!signupEmail || !signupPassword) {
         throw new Error('Please fill in all fields');
       }
 
@@ -67,17 +65,16 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         throw new Error('Password must be at least 6 characters');
       }
 
-      await authAPI.signup(signupEmail, signupPassword, signupName);
+      await authAPI.signup(signupEmail, signupPassword);
       setSuccess('Account created successfully! Please check your email to verify.');
       
-      setSignupName('');
       setSignupEmail('');
       setSignupPassword('');
       setSignupConfirmPassword('');
 
       setTimeout(() => {
         onLogin({
-          name: signupName,
+          name: signupEmail.split('@')[0],
           email: signupEmail,
         });
       }, 2000);
@@ -178,23 +175,6 @@ export function LoginPage({ onLogin }: LoginPageProps) {
               <TabsContent value="signup">
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signup-name">Full Name</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                      <Input
-                        id="signup-name"
-                        type="text"
-                        placeholder="John Doe"
-                        value={signupName}
-                        onChange={(e) => setSignupName(e.target.value)}
-                        className="pl-10"
-                        disabled={loading}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
                     <Label htmlFor="signup-email">Email</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -249,7 +229,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                     {loading ? (
                       <Loader className="w-4 h-4 animate-spin" />
                     ) : (
-                      <User className="w-4 h-4" />
+                      <Mail className="w-4 h-4" />
                     )}
                     {loading ? 'Creating Account...' : 'Create Account'}
                   </Button>

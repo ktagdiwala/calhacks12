@@ -1,7 +1,7 @@
 import axios from 'axios';
-import { supabase } from './supabase';
+import { supabase } from '../lib/supabase';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -27,11 +27,10 @@ api.interceptors.request.use(async (config) => {
 
 // Auth endpoints
 export const authAPI = {
-  signup: async (email: string, password: string, username: string) => {
+  signup: async (email: string, password: string) => {
     const response = await api.post('/auth/signup', {
       email,
       password,
-      username,
     });
     return response.data;
   },
