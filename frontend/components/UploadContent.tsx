@@ -352,14 +352,21 @@ export function UploadContent() {
         }
       }
 
-      // 8) POST quiz questions to backend
-      if (strictQuestions.length > 0) {
+      // 8) Prepare quiz questions with options for backend
+      const questionsWithOptions = strictQuestions.map((q) => ({
+        ...q,
+        options: q.type === "MULTIPLE_CHOICE" ? q.options : [],
+      }));
+
+      // 9) POST quiz questions to backend
+      if (questionsWithOptions.length > 0) {
         try {
           const quizResponse = await aiAPI.postQuizQuestions(
             selectedTopic,
             contentType.toUpperCase(),
-            strictQuestions,
-            userId
+            questionsWithOptions,
+            userId, 
+            
           );
           console.log("Quiz questions posted successfully:", quizResponse);
         } catch (err) {
