@@ -6,6 +6,7 @@ const { authenticateUser } = require("../middleware/auth");
 // Spaced Repetition Algorithm
 // Confidence levels: 1 (low) to 4 (high)
 // Days until next review increases with confidence
+
 function calculateNextReviewDays(confidence) {
   const daysMap = {
     1: 1, // Low confidence - review tomorrow
@@ -25,6 +26,135 @@ function getQuestionFormat(confidence) {
     4: "EXPLAIN_PROMPT", // Good
   };
   return formatMap[confidence] || "FLASHCARD";
+}
+
+// Calculate confidence level based on days since last review
+function calculateConfidenceFromDays(daysSinceLastReview) {
+  if (daysSinceLastReview <= 1) return 1; // Low confidence
+  if (daysSinceLastReview <= 2) return 2; // Below average
+  if (daysSinceLastReview <= 4) return 3; // Average
+  return 4; // Good
+}
+
+// Get a list of 3 random tags for a user
+async function getRandomTags(userId, count = 3) {
+  const allTags = await prisma.tag.findMany({
+    where: { userId },
+  });
+
+  if (allTags.length === 0) return [];
+
+  // Shuffle and return random tags
+  const shuffled = allTags.sort(() => 0.5 - Math.random());
+  return shuffled.slice(0, Math.min(count, allTags.length));
+}
+
+// Get questions to show based on difficulty and confidence
+async function getQuestionsToShow(userId) {
+  try {
+    // Get 3 random tags
+    const randomTags = await getRandomTags(userId, 3);
+
+    if (randomTags.length === 0) {
+      return [];
+    }
+
+    const questionsToShow = [];
+    const tagIds = randomTags.map((tag) => tag.id);
+
+    // Get all flashcards and quiz questions from these tags
+    const flashcards = await prisma.flashcard.findMany({
+      where: {
+        tagId: {
+          in: tagIds,
+        },
+      },
+      include: {
+        tag: true,
+      },
+    });
+
+    const quizQuestions = await prisma.quizQuestion.findMany({
+      where: {
+        tagId: {
+          in: tagIds,
+        },
+      },
+      include: {
+        tag: true,
+      },
+    });
+
+    // Get logs to calculate confidence based on review history
+    const logs = await prisma.log.findMany({
+      where: {
+        userId,
+        tagId: {
+          in: tagIds,
+        },
+      },
+      orderBy: {
+        timestamp: "desc",
+      },
+    });
+
+    // Create a map of the most recent log per question
+    const logMap = new Map();
+    logs.forEach((log) => {
+      const key = `question_${log.questionId}`;
+      if (!logMap.has(key)) {
+        logMap.set(key, log);
+      }
+    });
+
+    // Process flashcards
+    flashcards.forEach((flashcard) => {
+      const confidence = flashcard.rating || 3;
+      const questionType = getQuestionFormat(confidence);
+
+      // Only include flashcards that would be shown as flashcards
+      if (questionType === "FLASHCARD") {
+        questionsToShow.push({
+          questionId: flashcard.id,
+          question: flashcard.information,
+          typeOfQuestion: "FLASHCARD",
+          confidence,
+          tagId: flashcard.tagId,
+          tagName: flashcard.tag.name,
+        });
+      }
+    });
+
+    // Process quiz questions
+    quizQuestions.forEach((question) => {
+      const log = logMap.get(`question_${question.id}`);
+      const now = new Date();
+      let daysSinceLastReview = 0;
+
+      if (log) {
+        const timeDiff = now.getTime() - log.timestamp.getTime();
+        daysSinceLastReview = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+      }
+
+      const confidence = calculateConfidenceFromDays(daysSinceLastReview);
+      const questionType = getQuestionFormat(confidence);
+
+      questionsToShow.push({
+        questionId: question.id,
+        question: question.question,
+        typeOfQuestion: questionType,
+        confidence,
+        tagId: question.tagId,
+        tagName: question.tag.name,
+        daysSinceLastReview,
+      });
+    });
+
+    return questionsToShow;
+  } catch (error) {
+    console.error("Error getting questions to show:", error);
+    return [];
+  }
 }
 
 /* GET flashcards with tagId and userId - PUBLIC */
@@ -514,6 +644,22 @@ router.post("/tags", async (req, res, next) => {
     res.status(201).json({
       message: "Tag created successfully",
       tag,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/* GET questions to show for user - PUBLIC */
+router.get("/show/user/:userId", async (req, res, next) => {
+  try {
+    const userId = parseInt(req.params.userId);
+
+    const questionsToShow = await getQuestionsToShow(userId);
+
+    res.json({
+      count: questionsToShow.length,
+      questions: questionsToShow,
     });
   } catch (error) {
     next(error);

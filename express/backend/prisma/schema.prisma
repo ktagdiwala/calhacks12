@@ -52,6 +52,7 @@ model QuizQuestion {
   type          QuestionType
   sourceFile    String?
   explanation   String?
+  options       String[] // These are comma separated values
   
   // Foreign keys
   tagId         Int

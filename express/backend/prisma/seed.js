@@ -135,6 +135,7 @@ async function main() {
           type: q.type,
           sourceFile: q.sourceFile || null,
           explanation: q.explanation || `Explanation for ${q.correctAnswer}`, // Add default explanation if none provided
+          options: q.options || [], // Use empty array if no options provided
           tagId: tags[tagName].id,
         },
       });
@@ -170,6 +171,7 @@ async function main() {
           "Which pattern separates the construction of a complex object from its representation so that the same construction process can create different representations?",
         correctAnswer: "Builder",
         type: "MULTIPLE_CHOICE",
+        options: ["Factory", "Builder", "Prototype", "Abstract Factory"],
         explanation:
           "The Builder pattern lets you construct complex objects step by step. It is especially useful when an object needs to be created with numerous possible configurations. For example, building different types of documents (PDF, HTML) using the same construction process.",
       },
@@ -195,6 +197,12 @@ async function main() {
         question: "Which isolation level can cause phantom reads?",
         correctAnswer: "READ COMMITTED",
         type: "MULTIPLE_CHOICE",
+        options: [
+          "SERIALIZABLE",
+          "READ COMMITTED",
+          "REPEATABLE READ",
+          "READ UNCOMMITTED",
+        ],
       },
     ]))
   );
@@ -214,6 +222,7 @@ async function main() {
         question: "A process that is waiting for I/O is in which state?",
         correctAnswer: "Blocked",
         type: "MULTIPLE_CHOICE",
+        options: ["Running", "Ready", "Blocked", "Terminated"],
         explanation:
           "When a process requests I/O, it enters the Blocked (or Wait) state because it cannot proceed until the I/O operation completes. This allows other processes to use the CPU while waiting for I/O.",
       },
@@ -248,6 +257,7 @@ async function main() {
           "Which of these sorting algorithms is stable by default? (a) QuickSort (b) MergeSort (c) HeapSort",
         correctAnswer: "b",
         type: "MULTIPLE_CHOICE",
+        options: ["a) QuickSort", "b) MergeSort", "c) HeapSort"],
       },
     ]))
   );
@@ -281,6 +291,12 @@ async function main() {
           "For flow in a pipe, which dimensionless number compares inertial to viscous forces?",
         correctAnswer: "Reynolds number",
         type: "MULTIPLE_CHOICE",
+        options: [
+          "Nusselt number",
+          "Reynolds number",
+          "Froude number",
+          "Weber number",
+        ],
       },
     ]))
   );
@@ -313,6 +329,7 @@ async function main() {
         question: "Which controller action helps eliminate steady-state error?",
         correctAnswer: "Integral",
         type: "MULTIPLE_CHOICE",
+        options: ["Proportional", "Integral", "Derivative", "Feedback"],
       },
     ]))
   );
@@ -330,6 +347,7 @@ async function main() {
           "Which script is primarily used for native Japanese words and grammatical elements?",
         correctAnswer: "Hiragana",
         type: "MULTIPLE_CHOICE",
+        options: ["Kanji", "Hiragana", "Katakana", "Romaji"],
       },
       {
         question:
@@ -354,6 +372,7 @@ async function main() {
           "Which scale is commonly used for blues solos (a) Major (b) Minor pentatonic (c) Ionian",
         correctAnswer: "b",
         type: "MULTIPLE_CHOICE",
+        options: ["a) Major", "b) Minor pentatonic", "c) Ionian"],
       },
       {
         question:
@@ -377,6 +396,7 @@ async function main() {
           "Which macronutrient is primarily responsible for muscle repair and growth?",
         correctAnswer: "Protein",
         type: "MULTIPLE_CHOICE",
+        options: ["Carbohydrates", "Protein", "Fat", "Fiber"],
       },
       {
         question:
