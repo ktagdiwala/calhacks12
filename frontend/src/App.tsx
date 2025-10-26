@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Sidebar } from '../components/Sidebar';
-// import { TopicsPage } from './components/TopicsPage';
-// import { UploadContent } from './components/UploadContent';
+import { TopicsPage } from '../components/TopicsPage';
+import { UploadContent } from '../components/UploadContent';
 // import { FlashcardsPage } from './components/FlashcardsPage';
 // import { QuizPage } from './components/QuizPage';
 // import { TutorStudentPage } from './components/TutorStudentPage';
@@ -37,10 +37,10 @@ export default function App() {
     switch (currentPage) {
       case 'dashboard':
         return <DashboardPage />;
-      // case 'topics':
-      //   return <TopicsPage />;
-      // case 'upload':
-      //   return <UploadContent />;
+      case 'topics':
+        return <TopicsPage />;
+      case 'upload':
+        return <UploadContent />;
       // case 'flashcards':
       //   return <FlashcardsPage />;
       // case 'quiz':
