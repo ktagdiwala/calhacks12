@@ -31,7 +31,7 @@ model Tag {
   id          Int      @id @default(autoincrement())
   name        String   @unique
   description String?
-  
+  rating      Int?
   // Relations
   quizQuestions QuizQuestion[]
   flashcards    Flashcard[]
@@ -46,6 +46,7 @@ model QuizQuestion {
   correctAnswer String
   type          QuestionType
   sourceFile    String?
+  explanation   String?
   
   // Foreign keys
   tagId         Int
