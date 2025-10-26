@@ -14,9 +14,9 @@ Flashcards route
 - POST flashcard, answer, tagId to add new flashcards to the database
 - GET all tags for a userId
 - POST new tag for a userId
-- total items in log for a userID (cards reviewed) 7 days past past today
-- total flashcards/quiz_question or students tutored 7 days past today
-- Average confidence level for flashcards
-- get topicPercentage - percentage of topics masterd for a tag / divided by total topics for that tag
+- GET total items in log for a userID (cards reviewed) 7 days past past today
+- GET total flashcards/quiz_question or students tutored 7 days past today
+- GET Average confidence level for flashcards
+- GET topicPercentage - percentage of topics masterd for a tag / divided by total topics for that tag
 -  
 
