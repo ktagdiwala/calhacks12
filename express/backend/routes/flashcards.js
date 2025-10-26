@@ -678,7 +678,7 @@ router.post("/tags", async (req, res, next) => {
 router.get("/show/user/:userId", async (req, res, next) => {
   try {
     const userId = parseInt(req.params.userId);
-    let simulateDays = 3;
+    let simulateDays = 1;
 
     const questionsToShow = await getQuestionsToShow(userId, simulateDays);
     res.json({

@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react';
 import { TrendingUp, Brain, Target, Clock, Sunrise, Sunset } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Progress } from './ui/progress';
 import { Badge } from './ui/badge';
+import { analyticsAPI } from '../services/api';
 
 interface TopicProgress {
   name: string;
@@ -56,19 +58,42 @@ const getTimeOfDayLabel = (timeOfDay: string) => {
 };
 
 export function DashboardPage() {
-  const topicProgress: TopicProgress[] = [
-    { name: 'Machine Learning', progress: 75, streak: 12, lastActivity: '2 hours ago', timeOfDay: 'morning' },
-    { name: 'Organic Chemistry', progress: 45, streak: 5, lastActivity: '1 day ago', timeOfDay: 'dawn' },
-    { name: 'Spanish Vocabulary', progress: 90, streak: 28, lastActivity: '30 minutes ago', timeOfDay: 'day' },
-    { name: 'Art History', progress: 20, streak: 3, lastActivity: '3 days ago', timeOfDay: 'twilight' },
-  ];
+  const [topicProgress, setTopicProgress] = useState<TopicProgress[]>([]);
+  const [weeklyStats, setWeeklyStats] = useState({
+    totalCards: 0,
+    quizzesCompleted: 0,
+    tutoringSessions: 0,
+    averageConfidence: 0,
+  });
+  const [userId, setUserId] = useState<number | null>(null);
 
-  const weeklyStats = {
-    totalCards: 156,
-    quizzesCompleted: 24,
-    tutoringSessions: 8,
-    averageConfidence: 3.2,
-  };
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const storedUserId = localStorage.getItem('userId');
+        if (!storedUserId) {
+          console.error('No user ID found in localStorage');
+          return;
+        }
+
+        const userId = parseInt(storedUserId, 10);
+        setUserId(userId);
+        console.log(userId)
+
+        const [weeklyStatsData, topicProgressData] = await Promise.all([
+          analyticsAPI.getWeeklyStats(userId),
+          analyticsAPI.getTopicProgress(userId)
+        ]);
+
+        setWeeklyStats(weeklyStatsData);
+        setTopicProgress(topicProgressData);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   return (
     <div className="p-8">
