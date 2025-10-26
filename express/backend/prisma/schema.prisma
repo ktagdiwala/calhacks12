@@ -21,6 +21,7 @@ model User {
   authId    String   @unique
   
   // Relations
+  tags      Tag[]
   logs      Log[]
   userInputs UserInput[]
   
@@ -31,8 +32,12 @@ model Tag {
   id          Int      @id @default(autoincrement())
   name        String   @unique
   description String?
-  rating      Int?
+  
+  // Foreign keys
+  userId      Int
+  
   // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   quizQuestions QuizQuestion[]
   flashcards    Flashcard[]
   logs          Log[]
@@ -67,6 +72,7 @@ enum QuestionType {
 model Flashcard {
   id          Int      @id @default(autoincrement())
   information String
+  rating      Int?
   
   // Foreign keys
   tagId       Int

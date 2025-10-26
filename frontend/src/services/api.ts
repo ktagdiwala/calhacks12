@@ -72,4 +72,27 @@ export const userAPI = {
   },
 };
 
+// Tags endpoints
+export const tagsAPI = {
+  getAllTags: async () => {
+    const response = await api.get('/tags');
+    return response.data;
+  },
+
+  getTagsByUserId: async (userId: number) => {
+    const response = await api.get(`/tags/user/${userId}`);
+    return response.data;
+  },
+
+  createTag: async (tagData: { name: string; description?: string; userId: number }) => {
+    const response = await api.post('/tags', tagData);
+    return response.data;
+  },
+
+  createTagForUser: async (userId: number, tagData: { name: string; description?: string }) => {
+    const response = await api.post(`/tags/${userId}`, tagData);
+    return response.data;
+  },
+};
+
 export default api;

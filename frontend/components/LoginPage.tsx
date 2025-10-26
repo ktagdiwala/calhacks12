@@ -34,6 +34,12 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
       // DEMO MODE: Password is optional
       const response = await authAPI.signin(loginEmail, loginPassword || 'demo');
+      
+      // Store userId in localStorage for demo mode
+      if (response.user?.id) {
+        localStorage.setItem('userId', response.user.id.toString());
+      }
+      
       onLogin({
         name: response.user?.username || loginEmail.split('@')[0],
         email: response.user?.email || loginEmail,
@@ -57,9 +63,14 @@ export function LoginPage({ onLogin }: LoginPageProps) {
       if (!signupEmail) {
         throw new Error('Email is required');
       }
-
       // DEMO MODE: Password is optional
-      await authAPI.signup(signupEmail, signupPassword || 'demo_password');
+      const response = await authAPI.signup(signupEmail, signupPassword || 'demo_password');
+      
+      // Store userId in localStorage for demo mode
+      if (response.user?.id) {
+        localStorage.setItem('userId', response.user.id.toString());
+      }
+      
       setSuccess('Account created successfully!');
       
       setSignupEmail('');
