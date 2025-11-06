@@ -116,7 +116,7 @@ router.post("/flashcards", async (req, res, next) => {
 router.post("/quiz-questions", async (req, res, next) => {
   try {
     const { topic, content_type, quiz_questions, userId } = req.body;
-    console.log("Received quiz questions:", quiz_questions.map(q => q.options));
+    // console.log("Received quiz questions:", quiz_questions.map(q => q.options));
     // Validate required parameters
     if (!Array.isArray(quiz_questions)) {
       return res.status(400).json({ error: "quiz_questions must be an array" });

@@ -1,15 +1,14 @@
-var express = require("express");
-var router = express.Router();
+const express = require("express");
+const router = express.Router();
 const prisma = require("../lib/prisma");
-const supabase = require("../lib/supabase");
 const { authenticateUser } = require("../middleware/auth");
 
-/* Health check endpoint - PUBLIC */
+/* Health check endpoint */
 router.get("/", (req, res) => {
   res.json({ status: "ok", message: "API is running" });
 });
 
-/* SIGN UP - PUBLIC - DEMO MODE */
+/* SIGN UP - DEMO MODE */
 router.post("/auth/signup", async (req, res, next) => {
   try {
     const { email, password } = req.body;
@@ -19,13 +18,12 @@ router.post("/auth/signup", async (req, res, next) => {
     }
 
     // DEMO MODE: Create user directly in database
-    // No Supabase Auth required for demo
     const user = await prisma.user.create({
       data: {
         email,
-        username: email.split("@")[0], // Use email prefix as username
-        password: password || "demo_password", // Use provided password or default
-        authId: `demo_${email}`, // Generate a fake authId
+        username: email.split("@")[0],
+        password: password || "demo_password",
+        authId: `demo_${email}`,
       },
     });
 
@@ -45,25 +43,18 @@ router.post("/auth/signup", async (req, res, next) => {
   }
 });
 
-/* SIGN IN - PUBLIC - DEMO MODE: ANY VALID EMAIL */
+/* SIGN IN - DEMO MODE */
 router.post("/auth/signin", async (req, res, next) => {
   try {
-    console.log("POST /auth/signin - Request body:", req.body);
-    const { email, password } = req.body;
+    const { email } = req.body;
 
     if (!email) {
       return res.status(400).json({ error: "Email is required" });
     }
 
-
-    const user = await prisma.user
-      .findUnique({
-        where: { email: email },
-      })
-      .catch((err) => {
-        console.error("Database query error:", err);
-        throw err;
-      });
+    const user = await prisma.user.findUnique({
+      where: { email: email },
+    });
 
     if (!user) {
       return res
@@ -71,18 +62,19 @@ router.post("/auth/signin", async (req, res, next) => {
         .json({ error: "User not found. Please sign up first." });
     }
 
-    // DEMO MODE: Skip password validation, just return the user
-    // In production, validate password against Supabase
+    // DEMO MODE: Skip password validation
     return res.json({
       message: "Signed in successfully",
-      session: null, // No real session in demo mode
+      session: null,
       user,
     });
   } catch (error) {
-    console.error("Full error:", error);
+    console.error("Sign in error:", error);
     next(error);
   }
-}); /* SIGN OUT - PROTECTED */
+});
+
+/* SIGN OUT - PROTECTED */
 router.post("/auth/signout", authenticateUser, async (req, res, next) => {
   try {
     res.json({ message: "Signed out successfully" });
